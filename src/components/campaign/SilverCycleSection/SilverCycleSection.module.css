@@ -1,0 +1,557 @@
+/*
+ * How Silver works: one static artwork with semantic copy and four HTML step
+ * bubbles over it.
+ *
+ * The artwork (1746 × 901) carries the parchment, the reading table and a
+ * torn edge at both ends. Its baked top tear is hidden in favour of the
+ * shared tear (.tear), which covers the boundary with the reader problem
+ * section and that section's own baked bottom tear.
+ * On desktop the section takes the artwork's aspect ratio less that baked
+ * tear: never stretched, and everything over it is placed in cqw (1% of the
+ * section width) so it stays registered to the artwork.
+ */
+
+/* Clips sideways only, so the torn-paper transition can rise into section 2. */
+.section {
+  container-type: inline-size;
+  overflow-x: clip;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/*
+ * Reader problem → how Silver works tear. Same asset and z-order as the
+ * hero → reader problem tear (painted over both backdrops, under the copy).
+ *
+ * Unmirrored, the asset's profile follows section 2's baked bottom tear:
+ * high at both ends, dipping mid-page. At squash 0.62 its paper rises
+ * ~7cqw above the seam at the ends and ~2.3cqw at the central dip, which
+ * covers that baked tear; --tear-tuck carries its cream base 3cqw down into
+ * this section, where it fades into the artwork's own top fade.
+ * Static: this section's background does not move.
+ */
+.tear {
+  --tear-squash: 0.62;
+  --tear-tuck: 3cqw;
+  --tear-overlap: calc(100% - var(--tear-tuck));
+  --tear-fade: 1.6cqw;
+  --tear-drift: 0px;
+  z-index: 0;
+}
+
+/* Colour matches the artwork's parchment, showing through the top fade. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  background-color: #fbf0de;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * The top fade removes the baked torn strip (~4cqw), letting the scene rise
+ * out from under the shared tear on an eased ramp rather than a straight line.
+ */
+.artwork {
+  position: absolute;
+  inset: 0;
+  mask-image: linear-gradient(
+    180deg,
+    transparent 3cqw,
+    rgb(0 0 0 / 0.25) 4.4cqw,
+    rgb(0 0 0 / 0.7) 6cqw,
+    #000 7.5cqw
+  );
+  background: url("/assets/sections/silver-cycle/silver-cycle-background.webp") no-repeat 30% 50% / cover;
+}
+
+/* Below desktop the scene sits behind the copy; this keeps the copy legible. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 3%,
+    color-mix(in srgb, var(--color-paper) 90%, transparent) 12%,
+    color-mix(in srgb, var(--color-paper) 82%, transparent) 70%,
+    transparent 92%
+  );
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-9);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.1rem);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.35em;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 3.95cqw, 5.4rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.12;
+  letter-spacing: -0.018em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  width: fit-content;
+  color: var(--color-brand);
+}
+
+.underline {
+  position: absolute;
+  left: -0.04em;
+  top: 100%;
+  width: 72%;
+  height: 0.24em;
+  margin-top: -0.04em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 22em;
+  margin-top: 1.1em;
+  font-size: clamp(1.0625rem, 1.4cqw, 1.7rem);
+  line-height: 1.55;
+}
+
+.stepsFrame {
+  --bubble: min(40vw, 11.5rem);
+  --gap: var(--space-5);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(2, var(--bubble));
+  justify-content: center;
+  gap: var(--space-7) var(--gap);
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/*
+ * Cream paper disc. Its transform is reserved for hover; the entrance uses
+ * the independent translate / scale properties, so the two never fight.
+ */
+.bubble {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--bubble);
+  aspect-ratio: 1;
+  padding: 14% 9% 8%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 28%, rgb(255 255 252 / 0.9), transparent 58%),
+    radial-gradient(circle at 50% 50%, #fdf8ee 0 60%, #f6ecda 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.65),
+    inset 0 -0.6em 1.4em rgb(214 190 150 / 0.16),
+    0 0.35em 1.4em rgb(46 38 22 / 0.12);
+  text-align: center;
+  transition: transform 520ms cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* Hover shadow on its own layer: only its opacity animates. */
+.bubble::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 1.1em 2.4em rgb(46 38 22 / 0.2);
+  opacity: 0;
+  transition: opacity 320ms var(--ease-standard);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bubble:hover {
+    transform: translateY(-8px) scale(1.04);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bubble:hover::after {
+    opacity: 1;
+  }
+}
+
+.number {
+  position: absolute;
+  top: -7%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 27%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border: 0.18em solid #fffdf8;
+  border-radius: 50%;
+  background: #bfe5dc;
+  box-shadow: 0 0.15em 0.5em rgb(3 123 128 / 0.18);
+  color: var(--color-ink);
+  font-size: calc(var(--bubble) * 0.13);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.icon {
+  flex: none;
+  width: 33%;
+  height: auto;
+  margin-bottom: 5%;
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label {
+  color: var(--color-ink);
+  font-size: calc(var(--bubble) * 0.083);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.labelLine {
+  display: block;
+  white-space: nowrap;
+}
+
+.arrow {
+  display: none;
+}
+
+.reassuranceFrame {
+  display: flex;
+  justify-content: center;
+}
+
+.reassurance {
+  position: relative;
+  max-width: 26em;
+  font-size: clamp(1rem, 1.2cqw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.reassuranceLine {
+  display: block;
+}
+
+.reassuranceLine:first-child {
+  font-size: 1.12em;
+  font-weight: 700;
+}
+
+.loop {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork. Landmarks (section coordinates, after the lift below):
+ *   plain parchment wall   x 0–43,  y 0–30
+ *   left book stack        x 30–49, from y 23
+ *   mug / parcel / stack   x 54–97, from y 23.5
+ *   open book              x 38–69, y 28–37.7
+ *   table front            y 37.7–43, then the bottom tear
+ */
+@media (min-width: 1024px) {
+  /*
+   * The artwork's top 45 rows (its baked tear) are lifted above the section
+   * edge and clipped, so the scene starts right under the shared tear rather
+   * than below a band of blank parchment. The aspect ratio drops those rows.
+   */
+  .section {
+    --art-lift: calc(45 / 1746 * 100cqw);
+    aspect-ratio: 1746 / 856;
+  }
+
+  /*
+   * Measured from the artwork's own top: hidden while under the shared
+   * tear's cream base, fully opaque 3.1cqw into the section. What remains of
+   * the baked tear there is its white edge, which vanishes into that cream.
+   */
+  .artwork {
+    inset: calc(var(--art-lift) * -1) 0 0;
+    mask-image: linear-gradient(
+      180deg,
+      transparent calc(var(--art-lift) + 0.4cqw),
+      rgb(0 0 0 / 0.35) calc(var(--art-lift) + 1.4cqw),
+      rgb(0 0 0 / 0.8) calc(var(--art-lift) + 2.3cqw),
+      #000 calc(var(--art-lift) + 3.1cqw)
+    );
+    background-position: center;
+  }
+
+  .backdrop::after {
+    content: none;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+  }
+
+  /*
+   * Protected text column. The headline ends near 32.5cqw, 3cqw short of the
+   * first bubble; the body, level with the left book stack, ends near 28cqw.
+   */
+  .intro {
+    position: absolute;
+    top: 9.2cqw;
+    left: 5.4cqw;
+    width: 28cqw;
+  }
+
+  .eyebrow {
+    font-size: clamp(0.72rem, 0.88cqw, 1.05rem);
+  }
+
+  .headline {
+    font-size: 3.75cqw;
+  }
+
+  .body {
+    max-width: 18.8em;
+    margin-top: 0.95em;
+    font-size: 1.25cqw;
+    line-height: 1.5;
+  }
+
+  /*
+   * Four 13.7cqw discs and three 2.1cqw arrow gutters span 61.1cqw, from
+   * 35.4cqw to 96.5cqw. They sit in the window, above every object on the
+   * table: badge tops at 8.3cqw, disc bottoms at 23cqw.
+   */
+  .stepsFrame {
+    --bubble: 13.7cqw;
+    --gap: 2.1cqw;
+    position: absolute;
+    top: 9.25cqw;
+    left: 35.4cqw;
+  }
+
+  .steps {
+    display: flex;
+    gap: 0;
+  }
+
+  .arrow {
+    display: block;
+    flex: none;
+    width: var(--gap);
+    padding-inline: 0.3cqw;
+    fill: none;
+    stroke: var(--color-brand);
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 0.25cqw rgb(255 250 238 / 0.95));
+  }
+
+  /*
+   * On the table front under the open book, centred at 62cqw. The loops
+   * point back up to the two book stacks, closing the cycle.
+   */
+  .reassuranceFrame {
+    position: absolute;
+    top: 37.9cqw;
+    left: 62cqw;
+    align-items: center;
+    gap: 0.6cqw;
+    translate: -50% 0;
+  }
+
+  .reassurance {
+    flex: none;
+    isolation: isolate;
+    max-width: none;
+    font-size: 1.14cqw;
+    line-height: 1.38;
+    text-shadow:
+      0 0 0.35em rgb(255 249 236 / 0.95),
+      0 0 1em rgb(255 244 222 / 0.75);
+  }
+
+  /* Feathered pool of light under the words, not a card: no edge, no fill. */
+  .reassurance::before {
+    content: "";
+    position: absolute;
+    inset: -0.8em -2.2em;
+    z-index: -1;
+    background: radial-gradient(
+      closest-side,
+      rgb(255 247 230 / 0.78),
+      rgb(255 247 230 / 0.5) 60%,
+      rgb(255 247 230 / 0)
+    );
+  }
+
+  .loop {
+    display: block;
+    flex: none;
+    position: relative;
+    top: -1.8cqw;
+    width: 5.4cqw;
+    fill: none;
+    stroke: var(--color-ink);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-opacity: 0.8;
+    filter: drop-shadow(0 0 0.2cqw rgb(255 249 236 / 0.9));
+  }
+
+  .loopPath {
+    stroke-dasharray: 4 4.5;
+  }
+
+  .loopEnd {
+    transform: scaleX(-1);
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow → headline (underline wipes in) → body. Steps: one disc at
+ * a time, each arrow fading in as the disc before it settles. Reassurance:
+ * on its own, once it is on screen, then its loops. Each plays once.
+ * Entrances use the individual translate / scale properties and hover uses
+ * transform, so a hover mid-entrance never interrupts either.
+ * Script-gated so nothing is left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 700ms;
+    --reveal-stagger: 135ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > *,
+  .reassurance {
+    opacity: 0;
+    translate: 0 20px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .intro > :nth-child(2) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .intro > :nth-child(3) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease) calc(var(--reveal-stagger) * 2.5);
+  }
+
+  .bubble {
+    --reveal-delay: calc(var(--step) * var(--reveal-stagger));
+    opacity: 0;
+    translate: 0 20px;
+    scale: 0.94;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
+      scale var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
+      transform 520ms cubic-bezier(0.34, 1.45, 0.64, 1);
+  }
+
+  .arrow {
+    opacity: 0;
+    translate: -6px 0;
+    transition:
+      opacity 500ms var(--reveal-ease) calc(var(--step) * var(--reveal-stagger) + 260ms),
+      translate 500ms var(--reveal-ease) calc(var(--step) * var(--reveal-stagger) + 260ms);
+  }
+
+  /* After the message, each loop easing out from it towards its book stack. */
+  .loop {
+    opacity: 0;
+    translate: 8px 0;
+    transition:
+      opacity 600ms var(--reveal-ease) 320ms,
+      translate 600ms var(--reveal-ease) 320ms;
+  }
+
+  .loopEnd {
+    translate: -8px 0;
+  }
+
+  .intro[data-revealed="true"] > *,
+  .reassuranceFrame[data-revealed="true"] .reassurance,
+  .reassuranceFrame[data-revealed="true"] .loop,
+  .stepsFrame[data-revealed="true"] .bubble,
+  .stepsFrame[data-revealed="true"] .arrow {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -10% -20% 0);
+  }
+}

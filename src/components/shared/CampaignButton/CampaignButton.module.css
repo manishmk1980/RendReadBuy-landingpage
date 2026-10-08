@@ -1,0 +1,38 @@
+/* Functional baseline only; final treatment follows the approved creative. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.button[data-variant="primary"] {
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--color-brand);
+  color: var(--color-surface);
+}
+
+.button[data-variant="primary"]:hover {
+  background: var(--color-brand-strong);
+}
+
+.button[data-variant="secondary"] {
+  padding: var(--space-3) var(--space-6);
+  border: 2px solid currentColor;
+  border-radius: var(--radius-md);
+  color: var(--color-brand-strong);
+}
+
+.button[data-variant="text"] {
+  color: var(--color-brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

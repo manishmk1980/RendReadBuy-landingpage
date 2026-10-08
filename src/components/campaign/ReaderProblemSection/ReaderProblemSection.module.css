@@ -1,0 +1,240 @@
+/*
+ * Reader problem: one static artwork with semantic copy over its parchment.
+ *
+ * The artwork (1746 × 901) already contains the paper texture, the scene and
+ * a torn-paper edge at the bottom. Its baked top edge is faded out in favour
+ * of the shared hero tear (.tear), which covers the section boundary.
+ * On desktop the section takes the artwork's aspect ratio: it is shown whole,
+ * never stretched or cropped, and the copy scales with it in cqw (1% of the
+ * section width) so it always sits in the blank parchment area.
+ */
+
+/* Clips sideways only, so the torn-paper transition can rise into the hero. */
+.section {
+  container-type: inline-size;
+  overflow-x: clip;
+  background: var(--color-paper);
+}
+
+/*
+ * Hero → reader problem tear. z-index 0 paints it over both backdrops but
+ * under the hero copy (z-index 1) and this section's copy (later in the DOM).
+ *
+ * The source tear rises ~140 rows higher at its ends than in its central
+ * trough. Mirrored, widened and shifted, the trough sits under the hero CTA
+ * group, and the tall peaks fall on the hero's table and foliage instead.
+ * --tear-tuck keeps that trough above the boundary through the full drift:
+ * at squash 0.6 it rises ~4.7cqw above the box bottom, while the fibres
+ * under the gift link stay ~1.75cqw above the seam, clear of the link at
+ * 1728 × 891 (the tightest hero). The drift scales with width so that
+ * margin holds at every size (±4–6px on desktop).
+ */
+.tear {
+  --tear-flip: -1;
+  --tear-stretch: 1.43;
+  --tear-shift: 42.6%;
+  --tear-squash: 0.6;
+  --tear-tuck: 3.85cqw;
+  --tear-overlap: calc(100% - var(--tear-tuck));
+  --tear-fade: 1.5cqw;
+  --tear-drift: 0.3cqw;
+  z-index: 0;
+}
+
+/*
+ * Clipping frame. The artwork inside overscans it by --overscan on every side
+ * so pointer drift (--drift-x/-y at full deflection, from --rp-px/--rp-py)
+ * never exposes an edge; overscan must stay larger than the drift.
+ * Its colour matches the artwork's parchment, showing through the top fade.
+ */
+.backdrop {
+  --overscan: 10px;
+  --drift-x: -6px;
+  --drift-y: -4px;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  background-color: #fbf1df;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * The top fade removes the torn strip baked into the artwork (~45 of 901
+ * source rows), which the hero tear replaces, and lets the scene emerge
+ * from under that tear on an eased ramp instead of along a straight line.
+ */
+.artwork {
+  position: absolute;
+  inset: calc(var(--overscan) * -1);
+  mask-image: linear-gradient(
+    180deg,
+    transparent calc(var(--overscan) + 3cqw),
+    rgb(0 0 0 / 0.18) calc(var(--overscan) + 5cqw),
+    rgb(0 0 0 / 0.55) calc(var(--overscan) + 7.5cqw),
+    rgb(0 0 0 / 0.88) calc(var(--overscan) + 9.5cqw),
+    #000 calc(var(--overscan) + 11cqw)
+  );
+  background: url("/assets/sections/reader-problem/reader-problem-background.webp") no-repeat 78% 50% / cover;
+  transform: translate3d(
+    calc(var(--rp-px, 0) * var(--drift-x)),
+    calc(var(--rp-py, 0) * var(--drift-y)),
+    0
+  );
+}
+
+/* Below desktop the scene sits behind the copy; this keeps the copy legible. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 4%,
+    color-mix(in srgb, var(--color-paper) 92%, transparent) 14%,
+    color-mix(in srgb, var(--color-paper) 85%, transparent) 62%,
+    transparent 86%
+  );
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(var(--space-8), 16cqw, var(--space-10)) var(--container-gutter);
+  color: var(--color-ink);
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.1rem);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.headline {
+  margin-top: 0.3em;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 4.1cqw, 5.6rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.17;
+  letter-spacing: -0.018em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  width: fit-content;
+  color: var(--color-brand);
+}
+
+.underline {
+  position: absolute;
+  left: -0.05em;
+  top: 100%;
+  width: 52%;
+  height: 0.24em;
+  margin-top: -0.06em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 24em;
+  margin-top: 1.05em;
+  color: var(--color-ink);
+  font-size: clamp(1.0625rem, 1.5cqw, 1.8rem);
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+@media (min-width: 1024px) {
+  .section {
+    aspect-ratio: 1746 / 901;
+  }
+
+  .backdrop {
+    background-position: center;
+  }
+
+  .backdrop::after {
+    content: none;
+  }
+
+  .content {
+    height: 100%;
+    justify-content: center;
+    padding: 0 0 0 8.8cqw;
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Eyebrow → headline (underline wipes in with it) → body, once.
+ * Script-gated so the copy is never left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get it immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .copy {
+    --reveal-duration: 650ms;
+    --reveal-stagger: 150ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .copy > * {
+    opacity: 0;
+    translate: 0 20px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .copy > :nth-child(2) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .copy > :nth-child(3) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease) calc(var(--reveal-stagger) * 2);
+  }
+
+  .copy[data-revealed="true"] > * {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .copy[data-revealed="true"] .underline {
+    clip-path: inset(-20% -10% -20% 0);
+  }
+}

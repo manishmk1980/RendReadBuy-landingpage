@@ -1,0 +1,801 @@
+/*
+ * Hero: one immersive scene with semantic content layered above it.
+ *
+ * Coordinate system: `.canvas` reproduces the approved 1728 × 891 creative.
+ * Layer placement uses percentages of that canvas, measured against the
+ * reference, so at 1728 × 891 the composition matches it exactly.
+ *
+ * Two planes share that coordinate system:
+ *   .canvas  environment (landscape, window, table). Covers the scene, so on
+ *            viewports narrower than 1728:891 it zooms to fill the height.
+ *   .stage   reading objects and foliage. Scales with the viewport width, like
+ *            the copy, so objects never drift into the text when the
+ *            environment zooms. Objects are anchored by `--b` (box bottom, %
+ *            of the stage height), so they stay on the table as the stage
+ *            stretches with the canvas (see --stage-follow).
+ *
+ * Motion is split across nested wrappers so systems never overwrite:
+ *   .layer   placement only (left/top|bottom/width; no transform)
+ *   .motion  pointer (--hero-px/--hero-py) + scroll (--hero-exit) transform
+ *   .ambient automatic keyframes
+ */
+
+@property --hero-exit {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@keyframes hero-exit {
+  from {
+    --hero-exit: 0;
+  }
+  to {
+    --hero-exit: 1;
+  }
+}
+
+.hero {
+  --paper: var(--color-paper);
+  --canvas-width: 165%;
+  container: hero / inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  background: var(--paper);
+}
+
+/*
+ * --hero-exit: 0 while the hero rests at the top of the page, 1 once it has
+ * scrolled out. Scene layers consume it; Section 2's transition can reuse it
+ * (or the `--hero` view timeline) without touching this file.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero {
+      view-timeline: --hero block;
+      animation: hero-exit linear both;
+      animation-timeline: view(block 0px 0px);
+      animation-range: exit 0% exit 100%;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- scene */
+
+.scene {
+  container-type: size;
+  position: relative;
+  order: 2;
+  z-index: 0;
+  /* Shows the lower ~70% of a 165%-wide canvas: the reading objects, not the sky. */
+  aspect-ratio: 1.68;
+  overflow: clip;
+  isolation: isolate;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #bcdcf2 0%, #e2eef2 38%, #f3eee0 62%, var(--paper) 100%);
+}
+
+/* Covers the scene like object-fit: cover, cropping from the top-left. */
+.canvas,
+.stage {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: max(var(--canvas-width), 193.94cqh);
+  aspect-ratio: 1728 / 891;
+}
+
+.layer {
+  position: absolute;
+  top: var(--y, auto);
+  bottom: var(--b, auto);
+  left: var(--x);
+  width: var(--w);
+}
+
+.motion {
+  --hover-x: 0px;
+  --hover-y: 0px;
+  --exit-x: 0px;
+  --exit-y: 0px;
+  transform: translate3d(
+    calc(var(--hero-px, 0) * var(--hover-x) + var(--hero-exit) * var(--exit-x)),
+    calc(var(--hero-py, 0) * var(--hover-y) + var(--hero-exit) * var(--exit-y)),
+    0
+  );
+}
+
+.layerImage {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+
+/*
+ * Far: framed so the sunlit treeline fills the window and the range sits
+ * small and distant near the top, as in the reference.
+ */
+.mountain {
+  --x: 22%;
+  --y: -18.4%;
+  --w: 108%;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 7%);
+}
+
+.mountain .motion {
+  --hover-x: 3px;
+  --hover-y: 2px;
+  --exit-y: 72px;
+}
+
+/* Sunlit haze over the landscape; screen-blended inside the isolated scene. */
+.atmosphere {
+  position: absolute;
+  inset: 0 0 42% 0;
+  background:
+    radial-gradient(ellipse 30% 70% at 44% 40%, rgb(255 248 222 / 0.72), transparent 72%),
+    radial-gradient(ellipse 40% 46% at 56% 16%, rgb(236 244 250 / 0.5), transparent 75%),
+    radial-gradient(ellipse 26% 54% at 78% 4%, rgb(255 236 190 / 0.55), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+/*
+ * The window-table layer is transparent right of the window frame, where the
+ * reference shows a warm plaster wall. Reconstructed here in CSS.
+ */
+.wall {
+  position: absolute;
+  left: 82.2%;
+  top: 0;
+  width: 17.8%;
+  height: 58%;
+  background:
+    radial-gradient(ellipse 34% 22% at 70% 28%, rgb(150 92 48 / 0.18), transparent 72%),
+    radial-gradient(ellipse 30% 16% at 38% 58%, rgb(150 92 48 / 0.14), transparent 72%),
+    radial-gradient(ellipse 26% 14% at 82% 72%, rgb(150 92 48 / 0.12), transparent 72%),
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgb(246 214 182 / 0.9) 0%, transparent 72%),
+    linear-gradient(180deg, transparent 72%, rgb(240 216 190 / 0.9) 100%),
+    linear-gradient(100deg, #dcae88 0%, #e8bc95 26%, #e6b791 62%, #cc9a73 100%);
+  overflow: hidden;
+}
+
+/* Dappled leaf shadows cast by the supplied right foliage, as in the reference. */
+.wall::before {
+  content: "";
+  position: absolute;
+  inset: -20% -60% -10% -30%;
+  background: url("/assets/sections/hero/hero-foliage-right.webp") no-repeat 30% 20% / 120% auto;
+  filter: brightness(0) blur(5px);
+  opacity: 0.2;
+  mix-blend-mode: multiply;
+  transform: skewX(-24deg) rotate(10deg);
+}
+
+/* Plaster grain. */
+.wall::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.28 0 0 0 0 0.14 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+/* Structural: wooden frame, sill and floor. Never moves. */
+.windowTable {
+  --x: 0%;
+  --y: 0%;
+  --w: 100%;
+}
+
+/*
+ * Objects, back to front. They rest on a fixed table, so any travel reads as
+ * sliding: pointer and scroll offsets stay well below the foliage, mostly
+ * horizontal, and grow only slightly with depth.
+ */
+.plant {
+  --x: 59.4%;
+  --b: 40.6%;
+  --w: 11.4%;
+}
+
+.plant .motion {
+  --hover-x: -2.5px;
+  --hover-y: -0.5px;
+  --exit-y: -6px;
+}
+
+/* Stands behind the open book's left page, which hides its base. */
+.mug {
+  --x: 52.2%;
+  --b: 36%;
+  --w: 9.6%;
+}
+
+.mug .motion {
+  --hover-x: -3px;
+  --hover-y: -0.75px;
+  --exit-y: -8px;
+}
+
+/* Fully in frame so every spine reads; its foot tucks behind the open book. */
+.bookStack {
+  --x: 67.6%;
+  --b: 31%;
+  --w: 30%;
+}
+
+.bookStack .motion {
+  --hover-x: -3.5px;
+  --hover-y: -0.75px;
+  --exit-y: -10px;
+}
+
+.openBook {
+  --x: 35.8%;
+  --b: 5.4%;
+  --w: 52.4%;
+}
+
+.openBook .motion {
+  --hover-x: -4.5px;
+  --hover-y: -1px;
+  --exit-y: -14px;
+}
+
+/* Contact shadows travel with their object so nothing lifts off the table. */
+.plant .motion::before,
+.mug .motion::before,
+.bookStack .motion::before,
+.openBook .motion::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(74 38 12 / 0.55), rgb(74 38 12 / 0.22) 55%, transparent);
+}
+
+.plant .motion::before {
+  left: 30%;
+  top: 90%;
+  width: 46%;
+  height: 10%;
+}
+
+.mug .motion::before {
+  left: 20%;
+  top: 82%;
+  width: 66%;
+  height: 14%;
+}
+
+.bookStack .motion::before {
+  left: 0%;
+  top: 82%;
+  width: 98%;
+  height: 22%;
+}
+
+.openBook .motion::before {
+  left: 3%;
+  top: 70%;
+  width: 95%;
+  height: 26%;
+  rotate: 6deg;
+}
+
+/* Foreground: soft-focus leaves framing the corners, partly off-canvas. */
+/* Top leaves stop short of the header logo; lower leaves short of the copy. */
+.foliageLeft {
+  --x: -21%;
+  --y: -6%;
+  --w: 56%;
+}
+
+.foliageLeft .motion {
+  --hover-x: -16px;
+  --hover-y: -9px;
+  --exit-x: -56px;
+  --exit-y: -90px;
+}
+
+/* Top leaves start below the header so "Sign in" stays clear. */
+.foliageRight {
+  --x: 63.5%;
+  --y: 7%;
+  --w: 52.7%;
+}
+
+.foliageRight .motion {
+  --hover-x: -13px;
+  --hover-y: -7px;
+  --exit-x: 56px;
+  --exit-y: -110px;
+}
+
+/* Tones down the sunlit leaf edges so the frame stays soft beside the copy. */
+.foliageLeft .layerImage,
+.foliageRight .layerImage {
+  filter: saturate(0.86) brightness(0.96);
+}
+
+.foliageLeft .ambient {
+  transform-origin: 0% 56%;
+}
+
+.foliageRight .ambient {
+  transform-origin: 100% 34%;
+}
+
+.plant .ambient {
+  transform-origin: 50% 96%;
+}
+
+/*
+ * Paper blend: lights the copy area without a panel edge. Strongest behind
+ * the text, fading through the landscape to fully transparent by ~64%.
+ */
+.paperBlend {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    var(--paper) 0%,
+    color-mix(in srgb, var(--paper) 70%, transparent) 22%,
+    transparent 46%
+  );
+}
+
+/* ---------------------------------------------------------------- ambient */
+
+@keyframes hero-sway-left {
+  from {
+    transform: rotate(-0.7deg) translate3d(-2px, 0, 0);
+  }
+  to {
+    transform: rotate(1deg) translate3d(4px, -3px, 0);
+  }
+}
+
+@keyframes hero-sway-right {
+  from {
+    transform: rotate(0.8deg) translate3d(2px, 0, 0);
+  }
+  to {
+    transform: rotate(-1deg) translate3d(-4px, 3px, 0);
+  }
+}
+
+@keyframes hero-drift {
+  from {
+    transform: translate3d(-6px, 0, 0);
+  }
+  to {
+    transform: translate3d(6px, -2px, 0);
+  }
+}
+
+@keyframes hero-plant {
+  from {
+    transform: rotate(-0.5deg);
+  }
+  to {
+    transform: rotate(0.6deg);
+  }
+}
+
+@keyframes hero-light {
+  from {
+    opacity: 0.68;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .foliageLeft .ambient {
+    animation: hero-sway-left 11s ease-in-out infinite alternate;
+  }
+
+  .foliageRight .ambient {
+    animation: hero-sway-right 13.5s ease-in-out -4s infinite alternate;
+  }
+
+  .mountain .ambient {
+    animation: hero-drift 26s ease-in-out infinite alternate;
+  }
+
+  .plant .ambient {
+    animation: hero-plant 12s ease-in-out -3s infinite alternate;
+  }
+
+  .atmosphere {
+    animation: hero-light 15s ease-in-out infinite alternate;
+  }
+}
+
+/* ---------------------------------------------------------------- content */
+
+/*
+ * --u: 1% of the reference canvas width. Desktop caps it by hero height too,
+ * so wide-but-short viewports scale the copy down instead of overflowing.
+ */
+.content {
+  --u: 1cqw;
+  position: relative;
+  order: 1;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: calc(var(--header-height) + var(--space-5)) var(--container-gutter) var(--space-5);
+  color: var(--color-ink);
+}
+
+.eyebrow {
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, calc(var(--u) * 0.84), 1rem);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+}
+
+.headline {
+  margin-top: 0.08em;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, calc(var(--u) * 4.66), 5.8rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.09;
+  letter-spacing: -0.014em;
+  text-wrap: initial;
+}
+
+.emphasis {
+  position: relative;
+  display: inline-block;
+  color: var(--color-brand);
+}
+
+.underline {
+  position: absolute;
+  left: -0.05em;
+  top: 100%;
+  width: 84%;
+  height: 0.3em;
+  margin-top: -0.08em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.subheadline {
+  margin-top: 0.5em;
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, calc(var(--u) * 1.6), 2rem);
+  font-weight: 700;
+  font-variation-settings: "opsz" 36;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.body {
+  max-width: 27em;
+  margin-top: 0.5em;
+  color: var(--color-ink);
+  font-size: clamp(0.95rem, calc(var(--u) * 1.08), 1.3rem);
+  line-height: 1.32;
+}
+
+.accent {
+  position: relative;
+  margin-top: 0.5em;
+  padding: 0.16em 0.8em 0.1em 0.9em;
+  font-family: var(--font-hand);
+  font-size: clamp(1.25rem, calc(var(--u) * 1.62), 1.95rem);
+  line-height: 1.25;
+  color: var(--color-ink);
+  -webkit-text-stroke: 0.018em currentColor;
+  rotate: -0.6deg;
+}
+
+.brush {
+  position: absolute;
+  inset: 0 -0.2em 0 -0.15em;
+  width: calc(100% + 0.35em);
+  height: 100%;
+  fill: #f7c4a6;
+  opacity: 0.9;
+}
+
+.accentText {
+  position: relative;
+}
+
+.price {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5em;
+  margin-top: 0.12em;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, calc(var(--u) * 1.8), 2.2rem);
+  line-height: 1;
+}
+
+.amount {
+  font-size: 2.9em;
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.term {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.02em;
+  font-weight: 600;
+  font-variation-settings: "opsz" 24;
+  line-height: 1.08;
+}
+
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: min(100%, 26rem);
+  margin-top: var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.benefit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45em;
+  font-size: clamp(0.8rem, calc(var(--u) * 0.82), 1rem);
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.benefitIcon {
+  display: grid;
+  place-items: center;
+  width: clamp(2.6rem, calc(var(--u) * 3.6), 4.4rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-brand) 11%, #f6fbf8);
+  color: var(--color-brand);
+}
+
+.benefitLabel {
+  max-width: 7.4em;
+  text-wrap: balance;
+}
+
+.icon {
+  width: 52%;
+  height: 52%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: min(100%, 26rem);
+  margin-top: var(--space-4);
+}
+
+.actions a.primaryCta {
+  width: 100%;
+  min-height: clamp(3.1rem, calc(var(--u) * 3.4), 4.2rem);
+  padding: 0 1.2em;
+  gap: 0.6em;
+  border-radius: clamp(0.4rem, calc(var(--u) * 0.46), 0.6rem);
+  background: var(--color-brand);
+  box-shadow: 0 10px 22px -14px rgb(11 98 95 / 0.75);
+  font-size: clamp(1rem, calc(var(--u) * 1.16), 1.4rem);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.actions a.primaryCta:hover {
+  background: var(--color-brand-strong);
+  box-shadow: 0 14px 26px -14px rgb(11 98 95 / 0.85);
+}
+
+.actions a.primaryCta:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+.arrow {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate var(--duration-base) var(--ease-out);
+}
+
+.actions a:hover .arrow {
+  translate: 0.18em 0;
+}
+
+.reassurance {
+  align-self: stretch;
+  margin-top: 0.8em;
+  color: var(--color-ink-muted);
+  font-size: clamp(0.8rem, calc(var(--u) * 0.86), 1.05rem);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.actions a.giftCta {
+  min-height: 2.75rem;
+  gap: 0.5em;
+  margin-top: 0.35em;
+  color: var(--color-brand);
+  font-size: clamp(0.9rem, calc(var(--u) * 0.95), 1.15rem);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.giftLabel {
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.22em;
+}
+
+.actions a.giftCta:hover {
+  color: var(--color-brand-strong);
+}
+
+.giftIcon {
+  flex: none;
+  width: 1.9em;
+  height: 1.9em;
+  margin-right: 0.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop height: the hero fills the viewport (under the floating header),
+ * bounded so the composition never breaks:
+ *   --hero-min-height  floor for very short windows; copy scales down with
+ *                      height via --u, so the CTA stays in view.
+ *   --hero-max-ratio   narrowest width:height the scene may take. Below it the
+ *                      environment would zoom past ~21% (1728:891 ÷ 1.6), so
+ *                      the hero stops growing instead.
+ * Wider than 1728:891, the canvas is width-bound and crops sky from the top.
+ */
+@media (min-width: 1024px) {
+  .hero {
+    --canvas-width: 100%;
+    --hero-min-height: 36rem;
+    --hero-max-ratio: 1.6;
+    container-type: size;
+    display: block;
+    height: clamp(var(--hero-min-height), 100svh, 100vw / var(--hero-max-ratio));
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+  }
+
+  /*
+   * --stage-follow: share of the extra (beyond 1728:891) height the object
+   * stage takes. 1 keeps every contact line on the zoomed canvas but spreads
+   * the group apart; 0 keeps the group exactly as composed but slides it
+   * forward on the table.
+   * --stage-scale: object group size relative to the viewport width; it stays
+   * right-anchored, so lowering it also moves the open book away from the CTA.
+   */
+  .stage {
+    --stage-follow: 0.4;
+    --stage-scale: 1;
+    --stage-frame: calc(51.5625cqw * var(--stage-scale));
+    width: calc(100% * var(--stage-scale));
+    height: calc(var(--stage-frame) + max(0px, 100cqh - var(--stage-frame)) * var(--stage-follow));
+    aspect-ratio: auto;
+  }
+
+  .paperBlend {
+    background:
+      radial-gradient(
+        ellipse 30% 50% at 21% 54%,
+        var(--paper) 0%,
+        color-mix(in srgb, var(--paper) 92%, transparent) 42%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        var(--paper) 0%,
+        color-mix(in srgb, var(--paper) 97%, transparent) 14%,
+        color-mix(in srgb, var(--paper) 88%, transparent) 26%,
+        color-mix(in srgb, var(--paper) 66%, transparent) 35%,
+        color-mix(in srgb, var(--paper) 40%, transparent) 43%,
+        color-mix(in srgb, var(--paper) 18%, transparent) 51%,
+        color-mix(in srgb, var(--paper) 5%, transparent) 58%,
+        transparent 64%
+      );
+  }
+
+  /*
+   * --slack: height beyond the 1728:891 frame (narrower viewports). A share of
+   * it opens the four group breaks so the copy fills the taller hero instead
+   * of floating in it.
+   */
+  .content {
+    --u: min(1cqw, 1.9394cqh);
+    --slack: max(0px, 100cqh - 51.5625cqw);
+    --group-gap: min(var(--slack) * 0.07, var(--u) * 1.2);
+    height: 100%;
+    justify-content: safe center;
+    padding: max(calc(var(--header-height) + var(--space-3)), calc(var(--u) * 7)) 0 calc(var(--u) * 3.2) 8.4cqw;
+  }
+
+  .subheadline {
+    margin-top: calc(0.5em + var(--group-gap));
+  }
+
+  .accent {
+    margin-top: calc(0.55em + var(--group-gap));
+  }
+
+  .benefits {
+    grid-template-columns: repeat(4, calc(var(--u) * 7.4));
+    gap: 0;
+    width: auto;
+    margin-top: calc(var(--u) * 0.9 + var(--group-gap));
+    margin-left: calc(var(--u) * -0.95);
+  }
+
+  .actions {
+    width: calc(var(--u) * 27.4);
+    min-width: 20rem;
+    margin-top: calc(var(--u) * 0.9 + var(--group-gap));
+  }
+}
+
+/* Small laptops: the copy reaches its rem minimums, so it needs more height. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .hero {
+    --hero-min-height: 46rem;
+  }
+
+  .stage {
+    --stage-scale: 0.93;
+  }
+
+  /* Keeps the left leaves on the viewport edge despite the narrower stage. */
+  .foliageLeft {
+    --x: -28.5%;
+  }
+}

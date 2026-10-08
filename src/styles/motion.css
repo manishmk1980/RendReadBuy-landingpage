@@ -1,0 +1,68 @@
+/*
+ * Motion foundation.
+ *
+ * Parallax uses CSS scroll-driven animations (animation-timeline: view()).
+ * Browsers without support, and anyone requesting reduced motion, get the
+ * static composition, which must look intentional on its own.
+ */
+
+[data-depth] {
+  position: absolute;
+  pointer-events: none;
+}
+
+[data-depth="far"] {
+  z-index: var(--z-bg);
+  --parallax-distance: var(--parallax-far);
+}
+
+[data-depth="mid"] {
+  z-index: var(--z-mid);
+  --parallax-distance: var(--parallax-mid);
+}
+
+[data-depth="scene"] {
+  z-index: var(--z-scene);
+  --parallax-distance: var(--parallax-scene);
+}
+
+[data-depth="object"] {
+  z-index: var(--z-object);
+  --parallax-distance: var(--parallax-object);
+}
+
+[data-depth="foreground"] {
+  z-index: var(--z-foreground);
+  --parallax-distance: var(--parallax-foreground);
+}
+
+@keyframes campaign-parallax {
+  from {
+    translate: 0 var(--parallax-distance);
+  }
+  to {
+    translate: 0 calc(var(--parallax-distance) * -1);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-depth][data-parallax="true"] {
+      animation: campaign-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover;
+      will-change: translate;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

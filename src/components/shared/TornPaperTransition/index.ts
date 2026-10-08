@@ -1,0 +1,1 @@
+export { TornPaperTransition } from "./TornPaperTransition";

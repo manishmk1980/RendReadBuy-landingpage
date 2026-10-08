@@ -1,0 +1,65 @@
+/*
+ * Layout box = the paper band only (source minus the trimmed padding), full
+ * width. Owning sections tune it with (defaults are var() fallbacks, so a
+ * section class always wins regardless of stylesheet order):
+ *   --tear-overlap how far the box extends past the section edge (50%)
+ *   --tear-squash  vertical scale of the band (1 = source proportions)
+ *   --tear-stretch horizontal scale of the artwork (1 = box width)
+ *   --tear-shift   how far a stretched artwork is pulled left (e.g. 40%)
+ *   --tear-flip    -1 mirrors the tear horizontally
+ *   --tear-fade    soft fade at the inner edge, blending into the section
+ *   --tear-drift   scroll-linked travel either side of rest (0 = static)
+ */
+
+.transition {
+  position: absolute;
+  inset-inline: 0;
+  z-index: var(--z-transition);
+  aspect-ratio: calc(var(--tear-ratio) / var(--tear-squash, 1));
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+}
+
+.transition[data-edge="top"] {
+  top: 0;
+  translate: 0 calc(var(--tear-overlap, 50%) * -1);
+  mask-image: linear-gradient(180deg, #000 calc(100% - var(--tear-fade, 0px)), transparent);
+}
+
+.transition[data-edge="bottom"] {
+  bottom: 0;
+  translate: 0 var(--tear-overlap, 50%);
+  mask-image: linear-gradient(0deg, #000 calc(100% - var(--tear-fade, 0px)), transparent);
+}
+
+/* Overflows the box upwards by the trimmed padding, which is clipped away. */
+.image {
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--tear-shift, 0%) * -1);
+  width: calc(100% * var(--tear-stretch, 1));
+  height: calc(100% * var(--tear-trim));
+  max-width: none;
+  transform: scaleX(var(--tear-flip, 1));
+}
+
+@keyframes tear-drift {
+  from {
+    transform: translate3d(0, var(--tear-drift, 0px), 0);
+  }
+  to {
+    transform: translate3d(0, calc(var(--tear-drift, 0px) * -1), 0);
+  }
+}
+
+/* Rests at its static position mid-scroll; reduced motion keeps that rest. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .transition {
+      animation: tear-drift linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
