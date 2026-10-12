@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { decorateOutboundLinks } from "./attribution";
 import { isCampaignEvent, type CampaignEventParams } from "./events";
 import { track } from "./track";
 
@@ -15,12 +16,15 @@ function readParams(element: HTMLElement): CampaignEventParams {
 }
 
 /**
- * Mounted once in the root layout. Handles clicks on `[data-track-event]`
+ * Mounted once in the root layout. Carries landing-URL attribution onto
+ * RentReadBuy links (see `attribution.ts`) and handles clicks on `[data-track-event]`
  * elements and opening of `<details data-track-event>` (toggle does not
  * bubble, so it is observed in the capture phase).
  */
 export function AnalyticsListener() {
   useEffect(() => {
+    decorateOutboundLinks();
+
     function onClick(event: MouseEvent) {
       const target = (event.target as Element | null)?.closest<HTMLElement>(
         "[data-track-event]",

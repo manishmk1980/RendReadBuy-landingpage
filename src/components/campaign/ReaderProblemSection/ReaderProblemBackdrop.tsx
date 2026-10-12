@@ -14,7 +14,7 @@ export function ReaderProblemBackdrop({ className, imageClassName }: ReaderProbl
   usePointerParallax(ref, { xVar: "--rp-px", yVar: "--rp-py" });
 
   return (
-    <div ref={ref} className={className} aria-hidden="true">
+    <div ref={ref} className={className} aria-hidden="true" data-deferred-art="">
       <div className={imageClassName} />
     </div>
   );

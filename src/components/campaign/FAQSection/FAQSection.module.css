@@ -1,0 +1,522 @@
+/*
+ * FAQs: one static artwork with semantic copy on the parchment wall and a
+ * two-column accordion over the window.
+ *
+ * The artwork (1746 × 901) carries the parchment wall, the window, the book
+ * stack and mug (their titles printed in the image), the reading glasses, the
+ * open book, the daisies and a torn edge at both ends. Like sections 8 and 9,
+ * the previous section's baked bottom tear is the single edge between the
+ * two: this artwork's top tear is lifted away and the scene cross-fades up out
+ * of that section's teal band.
+ */
+
+/* Clips sideways only, so the backdrop can blend up into the section above. */
+.section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  background: #fcf1dc;
+  color: var(--color-ink);
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+/*
+ * Below desktop the scene is a band between the copy and the accordion,
+ * cropped to the books, mug, glasses and window (source x ~20–1020,
+ * y ~230–792) and clear of both baked tears, which the fades soften.
+ */
+.backdrop {
+  --drift-x: 5px;
+  --drift-y: 4px;
+  --scroll-travel: 6px;
+  position: relative;
+  order: 2;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 86%, transparent 100%);
+}
+
+.artwork {
+  position: absolute;
+  top: -40.9%;
+  left: -2%;
+  width: 174.6%;
+  aspect-ratio: 1746 / 901;
+  background: var(--faq-art) no-repeat 0 0 / 100% 100%;
+  transform: translate3d(
+    calc(var(--faq-px, 0) * var(--drift-x)),
+    calc(
+      var(--faq-py, 0) * var(--drift-y) + (0.5 - var(--scroll-progress, 0.5)) * 2 *
+        var(--scroll-travel)
+    ),
+    0
+  );
+}
+
+/* The copy and the accordion join the section's flow on either side of the band. */
+.content {
+  display: contents;
+}
+
+.intro {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-5);
+}
+
+/* "FAQs" keeps its lowercase s, unlike the other uppercase eyebrows. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: none;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.2cqw, 4.6rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  display: inline-block;
+  color: var(--color-brand-strong);
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 96%;
+  height: 0.2em;
+  margin-top: -0.02em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 24em;
+  margin-top: 1em;
+  font-size: clamp(1.0625rem, 1.35cqw, 1.55rem);
+  line-height: 1.45;
+}
+
+.faqFrame {
+  position: relative;
+  z-index: 1;
+  order: 3;
+  margin-top: calc(var(--space-6) * -1);
+  padding: 0 var(--container-gutter) var(--space-9);
+}
+
+/* -------------------------------------------------------------- accordion */
+
+.accordion {
+  --item-gap: var(--space-3);
+  display: grid;
+  gap: var(--item-gap);
+}
+
+/* Each column stacks independently, so an open answer only moves its own column. */
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--item-gap);
+}
+
+/* Warm cream paper, opaque enough to keep answers legible over the scene. */
+.item {
+  border: 1px solid rgb(255 255 255 / 0.75);
+  border-radius: 0.6rem;
+  background: linear-gradient(165deg, rgb(255 253 248 / 0.96), rgb(251 245 233 / 0.94));
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 14px 26px -20px rgb(70 48 20 / 0.6);
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.question {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  text-wrap: pretty;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9em;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.7em 0.9em 0.7em 1.1em;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--color-ink);
+  font-weight: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline-color: var(--color-ink);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: #eceef4;
+  color: var(--color-ink);
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard);
+}
+
+.icon svg {
+  width: 52%;
+  height: 52%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
+/* The vertical stroke folds away, turning plus into minus. */
+.iconVertical {
+  transform-origin: center;
+  transform-box: fill-box;
+  transition: scale var(--duration-base) var(--ease-standard);
+}
+
+.item[data-open="true"] .iconVertical {
+  scale: 1 0;
+}
+
+.item[data-open="true"] .icon {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+}
+
+/*
+ * Height animates through grid rows (0fr to 1fr), so no measuring is needed.
+ * A collapsed answer is also hidden from assistive tech; visibility waits for
+ * the close to finish before it switches off.
+ */
+.panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 320ms var(--ease-standard),
+    opacity 220ms var(--ease-standard),
+    visibility 0s linear 320ms;
+}
+
+.item[data-open="true"] .panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 320ms var(--ease-standard),
+    opacity 280ms var(--ease-standard) 60ms,
+    visibility 0s;
+}
+
+.panelInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.answer {
+  padding: 0 1.1em 1em;
+  color: var(--color-ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+/* Without JavaScript the triggers cannot toggle, so every answer is shown. */
+@media (scripting: none) {
+  .panel {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .icon {
+    display: none;
+  }
+
+  .trigger {
+    cursor: default;
+  }
+}
+
+/* -------------------------------------------------------------- tablet */
+
+@media (min-width: 768px) {
+  .accordion {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1746 × 901), from 1200px like sections 5–9. Landmarks, in
+ * source rows:
+ *   top tear              y 0–~95, lifted out of the section
+ *   parchment wall        x 0–650,  y 60–480
+ *   window frame          x 650–1590, y 75–545
+ *   book stack (printed)  x 40–465,  y 480–715
+ *   mug (printed)         x 420–630, y 495–665
+ *   reading glasses       x 674–896, y 580–657
+ *   open book             x 580–1400, y 620–795
+ *   bottom tear           y ~790–901, left visible for the next section
+ * The copy stays on the wall above the books and mug. The accordion spans
+ * the window (x ~657–1655) from y 232, a little above the reference, so the
+ * left column stays clear of the glasses even with its longest answer open.
+ */
+@media (min-width: 1200px) {
+  .section {
+    --art-lift: calc(150 / 1746 * 100cqw);
+    --blend: 3.4cqw;
+    display: block;
+    aspect-ratio: 1746 / 751;
+    background: none;
+  }
+
+  /* Eased fade on the static frame, so drift never moves the seam. */
+  .backdrop {
+    --overscan: 16px;
+    position: absolute;
+    inset: calc(var(--blend) * -1) 0 0;
+    aspect-ratio: auto;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgb(0 0 0 / 0.05) calc(var(--blend) * 0.3),
+      rgb(0 0 0 / 0.15) calc(var(--blend) * 0.48),
+      rgb(0 0 0 / 0.38) calc(var(--blend) * 0.64),
+      rgb(0 0 0 / 0.68) calc(var(--blend) * 0.8),
+      rgb(0 0 0 / 0.9) calc(var(--blend) * 0.92),
+      #000 var(--blend)
+    );
+  }
+
+  /*
+   * Twice the overscan sideways makes the image tall enough to overscan the
+   * bottom edge too, since its height follows its width.
+   */
+  .artwork {
+    inset: calc(var(--blend) - var(--art-lift) - var(--overscan)) calc(var(--overscan) * -2) auto;
+    width: auto;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  /* Protected text column on the parchment wall, above the books and mug. */
+  .intro {
+    position: absolute;
+    top: 2.35cqw;
+    left: 6.6cqw;
+    width: 29.5cqw;
+    padding: 0;
+  }
+
+  .eyebrow {
+    font-size: max(0.72rem, 0.86cqw);
+  }
+
+  .headline {
+    margin-top: 0.5em;
+    font-size: 3.4cqw;
+    line-height: 1.1;
+  }
+
+  .body {
+    max-width: 21em;
+    margin-top: 1.25em;
+    font-size: 1.3cqw;
+    line-height: 1.42;
+  }
+
+  .faqFrame {
+    position: absolute;
+    top: calc((232 - 150) / 1746 * 100cqw);
+    left: calc(657 / 1746 * 100cqw);
+    width: calc((1655 - 657) / 1746 * 100cqw);
+    margin: 0;
+    padding: 0;
+  }
+
+  .accordion {
+    --item-gap: 0.7cqw;
+    column-gap: 0.95cqw;
+  }
+
+  .item {
+    border-radius: 0.6cqw;
+  }
+
+  .question {
+    font-size: max(0.875rem, 0.98cqw);
+  }
+
+  .trigger {
+    min-height: max(2.75rem, 3.8cqw);
+    padding: 0.6em 0.75em 0.6em 1.15em;
+  }
+
+  .answer {
+    padding: 0 1.25em 1.05em;
+    font-size: max(0.8125rem, 0.9cqw);
+    line-height: 1.45;
+  }
+}
+
+/* ------------------------------------------------------------------ hover */
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover {
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.8) inset,
+      0 20px 32px -20px rgb(70 48 20 / 0.7);
+  }
+
+  .item:hover .icon {
+    background: var(--color-brand-soft);
+    color: var(--color-brand-strong);
+  }
+}
+
+/* A small lift; transform only, so the columns never reflow. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .item:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow fades, the two headline lines rise in turn, the underline
+ * wipes in left to right, then the paragraph. Accordion: rows rise in a
+ * 120ms stagger (the right column a half-step behind the left), held back a
+ * beat so they follow the intro. Each plays once. Script-gated so nothing is
+ * left hidden if JavaScript fails, and motion-gated so reduced-motion readers
+ * get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 720ms;
+    --reveal-stagger: 120ms;
+    --rows-hold: 380ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .headline > .line,
+  .intro > .body {
+    opacity: 0;
+    translate: 0 24px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .headline > .line:nth-child(1) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .headline > .line:nth-child(2) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .intro > .body {
+    --reveal-delay: calc(var(--reveal-stagger) * 5.5);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease)
+      calc(var(--reveal-stagger) * 3.5);
+  }
+
+  .faqFrame .item {
+    --row-delay: calc(
+      var(--rows-hold) + var(--reveal-stagger) * var(--row, 0) + var(--reveal-stagger) * 0.5 *
+        var(--col, 0)
+    );
+    opacity: 0;
+    translate: 0 20px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--row-delay),
+      translate var(--reveal-duration) var(--reveal-ease) var(--row-delay),
+      transform var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-standard);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] .line,
+  .intro[data-revealed="true"] > .body,
+  .faqFrame[data-revealed="true"] .item {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+}

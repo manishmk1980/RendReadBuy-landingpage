@@ -19,6 +19,8 @@ type CampaignButtonProps = Destination & {
   trackParams?: CampaignEventParams;
   /** Affiliate destinations must pass "sponsored". */
   rel?: string;
+  /** One-time attention cue (styles/motion.css); never hides or delays the CTA. */
+  cue?: "load" | "reveal";
   className?: string;
 };
 
@@ -32,6 +34,7 @@ export function CampaignButton({
   trackEvent,
   trackParams,
   rel,
+  cue,
   className,
   ...destination
 }: CampaignButtonProps) {
@@ -46,6 +49,7 @@ export function CampaignButton({
       rel={rel}
       className={[styles.button, className].filter(Boolean).join(" ")}
       data-variant={variant}
+      data-cue={cue}
       {...(trackEvent ? trackingAttributes(trackEvent, trackParams) : {})}
     >
       {children}

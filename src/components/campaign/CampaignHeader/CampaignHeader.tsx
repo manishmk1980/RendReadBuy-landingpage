@@ -11,7 +11,14 @@ export function CampaignHeader() {
   return (
     <header className={styles.header}>
       {brand.logo && (
-        <a href={links.home.href} className={styles.logoLink}>
+        <a
+          href={links.home.href}
+          className={styles.logoLink}
+          {...trackingAttributes("rentreadbuy_exit_click", {
+            placement: "header_logo",
+            destination: "home",
+          })}
+        >
           <Image
             src={brand.logo.src}
             alt={brand.logo.alt}

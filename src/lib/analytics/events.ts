@@ -7,6 +7,9 @@ export const campaignEvents = [
   "featured_book_click",
   "affiliate_product_click",
   "faq_open",
+  /** Any other hand-off to RentReadBuy: logos, the final fallback, footer links. */
+  "rentreadbuy_exit_click",
+  "social_profile_click",
 ] as const;
 
 export type CampaignEvent = (typeof campaignEvents)[number];

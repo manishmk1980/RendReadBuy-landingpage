@@ -1,0 +1,483 @@
+/*
+ * Silver value: one static artwork with semantic copy and five HTML benefits
+ * over its parchment.
+ *
+ * The artwork (1746 × 901) carries the reading room, the parchment and a
+ * torn edge at both ends. Its baked top tear is hidden in favour of the
+ * shared tear (.tear), which covers the boundary with How Silver works and
+ * that section's own baked bottom tear — one edge, not two stacked strips.
+ * On desktop the section keeps the artwork's aspect ratio: never stretched,
+ * and everything over it is placed in cqw (1% of the section width).
+ */
+
+/* Clips sideways only, so the torn-paper transition can rise into section 3. */
+.section {
+  container-type: inline-size;
+  overflow-x: clip;
+  background: #f7f1e4;
+  color: var(--color-ink);
+}
+
+/*
+ * How Silver works → Silver value tear. Same asset and z-order as the tears
+ * above it: painted over both backdrops, under this section's copy.
+ *
+ * Section 3's baked bottom tear is highest at the left (~7cqw) and nearly
+ * flat through the centre. Unmirrored, squash 0.78 puts this tear's ends
+ * about 6.5cqw above the seam and its central dip about 2cqw above it, which
+ * covers that baked edge. --tear-tuck carries the cream base into the masked
+ * top of this artwork, where it fades out as the scene becomes opaque.
+ * Static: this section's background moves with the pointer, not on scroll.
+ */
+.tear {
+  --tear-squash: 0.92;
+  --tear-tuck: 8.6cqw;
+  --tear-overlap: calc(100% - var(--tear-tuck));
+  --tear-fade: 2.2cqw;
+  --tear-drift: 0px;
+  z-index: 0;
+}
+
+/*
+ * Clipping frame. The artwork inside overscans it by --overscan on every side
+ * so pointer drift (--drift-x/-y at full deflection, from --sb-px/--sb-py)
+ * never exposes an edge; overscan stays larger than the drift.
+ * Its colour matches the artwork's parchment, showing through the top fade.
+ */
+.backdrop {
+  --overscan: 12px;
+  --drift-x: 5px;
+  --drift-y: 4px;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  background-color: #f7f1e4;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * The top fade removes the torn strip baked into the artwork (about the top
+ * 120 of 901 source rows), which the shared tear replaces, and lets the
+ * scene emerge on an eased ramp instead of along a straight line.
+ */
+.artwork {
+  position: absolute;
+  inset: calc(var(--overscan) * -1);
+  mask-image: linear-gradient(
+    180deg,
+    transparent calc(var(--overscan) + 5.2cqw),
+    rgb(0 0 0 / 0.25) calc(var(--overscan) + 6.6cqw),
+    rgb(0 0 0 / 0.7) calc(var(--overscan) + 7.6cqw),
+    #000 calc(var(--overscan) + 8.4cqw)
+  );
+  background: url("/assets/sections/silver-benefits/silver-benefits-background.webp") no-repeat
+    center / cover;
+  transform: translate3d(
+    calc(var(--sb-px, 0) * var(--drift-x)),
+    calc(var(--sb-py, 0) * var(--drift-y)),
+    0
+  );
+}
+
+/* Below desktop the scene sits behind the copy; this keeps the copy legible. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 2%,
+    color-mix(in srgb, var(--color-paper) 92%, transparent) 12%,
+    color-mix(in srgb, var(--color-paper) 88%, transparent) 78%,
+    transparent 94%
+  );
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-8);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 3.9cqw, 5.2rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  width: fit-content;
+  color: var(--color-brand);
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 58%;
+  height: 0.22em;
+  margin-top: -0.02em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 28em;
+  margin-top: 0.95em;
+  font-size: clamp(1.0625rem, 1.35cqw, 1.55rem);
+  line-height: 1.5;
+}
+
+.benefits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.iconWrap {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.icon {
+  width: 2.65rem;
+  height: 2.65rem;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.value {
+  color: var(--color-brand);
+  font-size: 1.85em;
+  font-weight: 700;
+  font-variant-numeric: lining-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.lead,
+.detail {
+  display: block;
+}
+
+.detail {
+  font-weight: 500;
+}
+
+/* brand-strong: on the sunlit floor --color-brand falls under 4.5:1. */
+.leadEmphasis {
+  color: var(--color-brand-strong);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1746 × 901). Landmarks, in source rows:
+ *   top tear              y 0–120, masked under the shared tear
+ *   parchment wall        x 0–42, y 140–700
+ *   open book             x 42–78, y 500–620
+ *   sunlit floor          y 630–740
+ *   bottom tear           y 750–901
+ */
+@media (min-width: 1024px) {
+  /*
+   * The artwork's top 100 rows (its baked tear) are lifted above the section
+   * edge and clipped, so the window scene starts right under the shared
+   * tear instead of below a band of blank parchment. The aspect ratio drops
+   * those rows.
+   */
+  .section {
+    --art-lift: calc(100 / 1746 * 100cqw);
+    aspect-ratio: 1746 / 801;
+  }
+
+  /*
+   * The tear's cream paper fades straight into the opaque scene: its teal
+   * band ends 0.5–3cqw below the seam across the window, and the long fade
+   * dissolves the cream beneath it rather than leaving a flat strip.
+   */
+  .tear {
+    --tear-tuck: 6cqw;
+    --tear-fade: 4.2cqw;
+  }
+
+  .artwork {
+    inset: calc((var(--art-lift) + var(--overscan)) * -1) calc(var(--overscan) * -1)
+      calc(var(--overscan) * -1);
+    mask-image: none;
+  }
+
+  .backdrop::after {
+    content: none;
+  }
+
+  /*
+   * In flow, so copy that grows (user text-spacing or font overrides) pushes
+   * the benefits row down and the section taller, instead of overlapping.
+   * At normal sizes the first row stays at its 31.4cqw minimum and the
+   * section keeps the artwork's aspect ratio.
+   */
+  .content {
+    display: grid;
+    grid-template-rows: minmax(31.4cqw, auto) auto;
+    align-content: start;
+    gap: 0;
+    padding: 0;
+  }
+
+  /*
+   * Protected text column on the parchment. The second headline line ends
+   * near 40cqw, short of the window frame; the body stays left of the book
+   * stack (x ~42) and above the open book (y ~28cqw).
+   */
+  .intro {
+    align-self: start;
+    width: 34cqw;
+    margin: 5.6cqw 0 0 6.6cqw;
+  }
+
+  .eyebrow {
+    font-size: 0.86cqw;
+  }
+
+  .headline {
+    font-size: 3.55cqw;
+  }
+
+  .body {
+    max-width: 26em;
+    margin-top: 0.85em;
+    font-size: 1.18cqw;
+    line-height: 1.45;
+  }
+
+  /*
+   * One editorial row on the light floor / parchment, above the bottom tear
+   * (source y ~750, which is 43.0cqw) and clear of the open book (ends ~36cqw).
+   */
+  .benefitsFrame {
+    margin-inline: 5.2cqw;
+  }
+
+  .benefits {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .benefit {
+    position: relative;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45cqw;
+    min-width: 0;
+    padding-inline: 0.7cqw;
+    text-align: center;
+  }
+
+  .benefit:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    top: 0.35cqw;
+    bottom: 0.2cqw;
+    left: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--color-ink) 16%, transparent);
+  }
+
+  .iconWrap {
+    width: 2.7cqw;
+    height: 2.7cqw;
+    transform: translate3d(0, 0, 0);
+    transition: transform 480ms cubic-bezier(0.34, 1.25, 0.64, 1);
+  }
+
+  .icon {
+    width: 2.45cqw;
+    height: 2.45cqw;
+  }
+
+  .label {
+    position: relative;
+    isolation: isolate;
+    max-width: 16cqw;
+    font-size: 0.98cqw;
+    line-height: 1.22;
+    text-shadow:
+      0 0 0.35em rgb(255 248 236 / 0.95),
+      0 0 0.9em rgb(255 246 230 / 0.75);
+  }
+
+  /*
+   * Feathered pool of light under the words, as in How Silver works: the
+   * floor's shadows run behind the right-hand benefits.
+   */
+  .label::before {
+    content: "";
+    position: absolute;
+    inset: -0.6em -1.2em;
+    z-index: -1;
+    background: radial-gradient(
+      closest-side,
+      rgb(255 247 230 / 0.88),
+      rgb(255 247 230 / 0.62) 60%,
+      rgb(255 247 230 / 0)
+    );
+  }
+
+  .value {
+    margin-bottom: 0.12em;
+    font-size: 2.05em;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .benefit:hover .iconWrap {
+    transform: translate3d(0, -6px, 0) scale(1.04);
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow fades, then the headline rises and its underline wipes in,
+ * then the paragraph. Benefits: one item at a time as the strip itself
+ * enters, icon first and label just after; the ₹0 figures settle with a
+ * small scale. Each plays once.
+ * Entrances use the individual translate / scale properties and hover uses
+ * transform, so a hover mid-entrance never interrupts either.
+ * Script-gated so nothing is left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 680ms;
+    --reveal-stagger: 130ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .intro > .headline,
+  .intro > .body {
+    opacity: 0;
+    translate: 0 20px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .intro > .headline {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .intro > .body {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease) calc(var(--reveal-stagger) * 2.4);
+  }
+
+  .iconWrap {
+    opacity: 0;
+    translate: 0 14px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) calc(var(--benefit) * var(--reveal-stagger)),
+      translate var(--reveal-duration) var(--reveal-ease) calc(var(--benefit) * var(--reveal-stagger)),
+      transform 480ms cubic-bezier(0.34, 1.25, 0.64, 1);
+  }
+
+  .label {
+    opacity: 0;
+    translate: 0 12px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease)
+        calc(var(--benefit) * var(--reveal-stagger) + 100ms),
+      translate var(--reveal-duration) var(--reveal-ease)
+        calc(var(--benefit) * var(--reveal-stagger) + 100ms);
+  }
+
+  .value {
+    scale: 0.94;
+    transition: scale var(--reveal-duration) var(--reveal-ease)
+      calc(var(--benefit) * var(--reveal-stagger) + 160ms);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] > .headline,
+  .intro[data-revealed="true"] > .body,
+  .benefitsFrame[data-revealed="true"] .iconWrap,
+  .benefitsFrame[data-revealed="true"] .label {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+
+  .benefitsFrame[data-revealed="true"] .value {
+    scale: 1;
+  }
+}

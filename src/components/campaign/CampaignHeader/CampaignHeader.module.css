@@ -73,10 +73,13 @@
   pointer-events: auto;
 }
 
+/* A full 44px row: the whole height is the tap target, not just the text. */
 .signIn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  min-height: 2.75rem;
+  vertical-align: middle;
   color: var(--color-ink);
   font-weight: var(--weight-semibold);
   text-decoration: none;
@@ -85,6 +88,16 @@
 
 .signIn:hover {
   color: var(--color-brand-strong);
+}
+
+/*
+ * Short viewports (landscape phones, 400% zoom): a fixed bar would cover a
+ * large share of the screen, so it stays at the top of the page instead.
+ */
+@media (max-height: 30rem) {
+  .header {
+    position: absolute;
+  }
 }
 
 @media (min-width: 768px) {
@@ -101,7 +114,7 @@
 
   /* Over the hero, the prompt sits on window-frame foliage; keep it legible. */
   .member {
-    padding: 0.4rem 0.9rem;
+    padding: 0 0.9rem;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-paper) 82%, transparent);
   }

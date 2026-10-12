@@ -1,0 +1,626 @@
+/*
+ * Reader proof: one static artwork with semantic copy and up to three HTML
+ * testimonial cards over it.
+ *
+ * The artwork (1746 × 901) carries a parchment wall, the window, the reading
+ * table and a torn edge at both ends. Section 5's own baked bottom tear is the
+ * single edge between the two sections, so this artwork's baked top tear is
+ * lifted away and the scene cross-fades up out of section 5's teal band, the
+ * same hand-off section 5 makes with section 4.
+ */
+
+/* Clips sideways only, so the backdrop can blend up into section 5. */
+.section {
+  container-type: inline-size;
+  overflow-x: clip;
+  background: #fcf1dc;
+  color: var(--color-ink);
+}
+
+/*
+ * Clipping frame. The artwork inside overscans it by at least --overscan on
+ * every side so pointer drift (--drift-x/-y at full deflection, from
+ * --tm-px/--tm-py) plus scroll travel (±--scroll-travel, from
+ * --scroll-progress) never exposes an edge.
+ */
+.backdrop {
+  --overscan: 16px;
+  --drift-x: 5px;
+  --drift-y: 4px;
+  --scroll-travel: 6px;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * Below desktop the section is taller than the artwork's ratio, so cover
+ * scales it to the section height; the top fade hides the baked torn strip
+ * (top ~13% of the source rows) and lets the scene rise out of the cream.
+ */
+.artwork {
+  position: absolute;
+  inset: calc(var(--overscan) * -1);
+  mask-image: linear-gradient(180deg, transparent 15%, #000 26%);
+  background: url("/assets/sections/testimonials/testimonials-background.webp") no-repeat 58% 100% /
+    cover;
+  transform: translate3d(
+    calc(var(--tm-px, 0) * var(--drift-x)),
+    calc(
+      var(--tm-py, 0) * var(--drift-y) + (0.5 - var(--scroll-progress, 0.5)) * 2 *
+        var(--scroll-travel)
+    ),
+    0
+  );
+}
+
+/* Below desktop the scene sits behind the copy; this keeps the copy legible. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 6%,
+    color-mix(in srgb, var(--color-paper) 90%, transparent) 16%,
+    color-mix(in srgb, var(--color-paper) 72%, transparent) 80%,
+    transparent 96%
+  );
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-9);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 3.9cqw, 5.2rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.lineEmphasis {
+  color: var(--color-brand-strong);
+}
+
+.emphasis {
+  position: relative;
+  display: inline-block;
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 104%;
+  height: 0.22em;
+  margin-top: -0.04em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 17em;
+  margin-top: 0.9em;
+  font-size: clamp(1.0625rem, 1.35cqw, 1.55rem);
+  line-height: 1.45;
+}
+
+/* Development-only review marker; production omits the section instead. */
+.reviewFlag {
+  width: fit-content;
+  margin-bottom: var(--space-4);
+  padding: 0.35em 0.8em;
+  border: 1px dashed var(--color-accent);
+  border-radius: 999px;
+  background: rgb(255 250 241 / 0.85);
+  color: #9a3f22;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Warm parchment paper with a faint fibre texture; the centre card of three
+ * takes a mint-paper tint and a teal keyline. Corners stay nearly square.
+ */
+.card {
+  --card-pad: var(--space-5) var(--space-5) var(--space-6);
+  --card-radius: 0.4rem;
+  --card-paper: rgb(255 249 238 / 0.95);
+  --card-edge: rgb(120 88 52 / 0.16);
+  --card-shadow: 0 18px 30px -22px rgb(74 48 20 / 0.55), 0 2px 6px -3px rgb(74 48 20 / 0.18);
+  --card-shadow-hover: 0 30px 42px -24px rgb(74 48 20 / 0.6), 0 6px 12px -5px rgb(74 48 20 / 0.2);
+  position: relative;
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--card-edge);
+  border-radius: var(--card-radius);
+  background: var(--card-paper);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 420ms var(--ease-out);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.55), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.33 0 0 0 0 0.2 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.card[data-tint="mint"] {
+  --card-paper: rgb(228 244 236 / 0.95);
+  --card-edge: color-mix(in srgb, var(--color-brand) 34%, transparent);
+  --card-shadow: 0 20px 32px -22px rgb(2 84 88 / 0.5), 0 2px 7px -3px rgb(2 84 88 / 0.18);
+  --card-shadow-hover: 0 32px 44px -24px rgb(2 84 88 / 0.58), 0 6px 13px -5px rgb(2 84 88 / 0.22);
+}
+
+.figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0;
+  padding: var(--card-pad);
+}
+
+.cardHead {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-height: 2.2rem;
+}
+
+.quoteMark {
+  position: absolute;
+  top: 0;
+  left: -0.15rem;
+  width: 2.2rem;
+  height: 1.65rem;
+  fill: var(--color-brand-strong);
+}
+
+.portrait,
+.portraitSlot {
+  flex: none;
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 50%;
+}
+
+.portrait {
+  object-fit: cover;
+  border: 3px solid rgb(255 255 255 / 0.9);
+  box-shadow: 0 6px 14px -8px rgb(18 32 58 / 0.55);
+}
+
+.portraitSlot {
+  border: 1.5px dashed rgb(18 32 58 / 0.28);
+  background: rgb(18 32 58 / 0.04);
+}
+
+.quote {
+  margin: 1.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  font-variation-settings: "opsz" 24;
+  line-height: 1.32;
+  color: var(--color-ink);
+  text-wrap: pretty;
+}
+
+.attribution {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  padding-right: 2.5rem;
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.reader {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.membership {
+  color: var(--color-brand-strong);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.glyph {
+  position: absolute;
+  right: var(--glyph-inset, 1.25rem);
+  bottom: var(--glyph-inset, 1.25rem);
+  width: 1.9rem;
+  height: 1.9rem;
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.placeholderTag {
+  align-self: flex-start;
+  margin-top: 1rem;
+  padding: 0.2em 0.6em;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  border-radius: 0.25rem;
+  color: #9a3f22;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.placeholderBody {
+  margin-top: 0.6rem;
+  color: var(--color-ink-muted);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-style: italic;
+  line-height: 1.32;
+}
+
+@media (min-width: 768px) {
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: var(--space-4);
+  }
+
+  .cards[data-count="1"] {
+    max-width: 24rem;
+  }
+
+  .cards[data-count="2"] {
+    max-width: 48rem;
+  }
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1746 × 901), from 1200px like section 5. Landmarks, in
+ * source rows:
+ *   top tear              y 0–~120, lifted out of the section
+ *   parchment wall        x 0–620,  y 60–520
+ *   window, flower pots   x 620–1746, y 60–600
+ *   open book, blanket    x 190–1200, y 600–820
+ *   bottom tear           y ~815–901, left visible for the next section
+ * Cards sit where the approved creative places them: x 690–1671, y 307–657.
+ */
+@media (min-width: 1200px) {
+  /*
+   * --art-lift: source rows above the section edge. The baked top tear ends
+   *   by row ~120 (one dip to ~135 near x 775), and the blend zone keeps
+   *   those rows transparent; any more lift pushes the intro onto the books.
+   * --blend: how far the scene reaches up over section 5's bottom, fading in
+   *   so it is fully opaque at the seam. Section 5's cards end well above
+   *   it; its baked tear's teal band is what this scene emerges from.
+   */
+  .section {
+    --art-lift: calc(150 / 1746 * 100cqw);
+    --blend: 3.4cqw;
+    aspect-ratio: 1746 / 751;
+    background: none;
+  }
+
+  /*
+   * The fade lives on the static frame, so drift never moves the seam. Eased
+   * so the baked tear rows in the upper half stay under ~15% and the scene
+   * dissolves into section 5's watercolour band instead of meeting it on a
+   * line.
+   */
+  .backdrop {
+    top: calc(var(--blend) * -1);
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgb(0 0 0 / 0.05) calc(var(--blend) * 0.3),
+      rgb(0 0 0 / 0.15) calc(var(--blend) * 0.48),
+      rgb(0 0 0 / 0.38) calc(var(--blend) * 0.64),
+      rgb(0 0 0 / 0.68) calc(var(--blend) * 0.8),
+      rgb(0 0 0 / 0.9) calc(var(--blend) * 0.92),
+      #000 var(--blend)
+    );
+  }
+
+  /*
+   * Twice the overscan sideways makes the image tall enough to overscan the
+   * bottom edge too, since its height follows its width.
+   */
+  .artwork {
+    inset: calc(var(--blend) - var(--art-lift) - var(--overscan)) calc(var(--overscan) * -2) auto;
+    aspect-ratio: 1746 / 901;
+    mask-image: none;
+    background-position: 0 0;
+    background-size: 100% 100%;
+  }
+
+  .backdrop::after {
+    content: none;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+  }
+
+  /* Protected text column on the parchment wall, clear of the first card. */
+  .intro {
+    position: absolute;
+    top: 2.2cqw;
+    left: 6.35cqw;
+    width: 32.5cqw;
+  }
+
+  .eyebrow {
+    font-size: max(0.72rem, 0.9cqw);
+  }
+
+  .headline {
+    margin-top: 0.5em;
+    font-size: 3.85cqw;
+    line-height: 1.04;
+  }
+
+  .underline {
+    margin-top: -0.02em;
+  }
+
+  .body {
+    max-width: 15em;
+    margin-top: 0.8em;
+    font-size: 1.6cqw;
+    line-height: 1.36;
+    text-wrap: wrap;
+  }
+
+  .reviewFlag {
+    position: absolute;
+    bottom: calc(100% + 0.9cqw);
+    left: 0;
+    margin: 0;
+    font-size: max(0.75rem, 0.8cqw);
+  }
+
+  .cardsFrame {
+    position: absolute;
+    top: calc((307 - 150) / 1746 * 100cqw);
+    left: 39.5cqw;
+    right: 4.3cqw;
+  }
+
+  .cards {
+    display: flex;
+    justify-content: center;
+    gap: 0.86cqw;
+    max-width: none;
+  }
+
+  .cards[data-count] {
+    max-width: none;
+  }
+
+  .card {
+    --card-pad: 1.3cqw 1.85cqw 1.9cqw;
+    --card-radius: 0.35cqw;
+    flex: 0 0 18.1cqw;
+    min-height: 20cqw;
+  }
+
+  .cardHead {
+    min-height: 2cqw;
+  }
+
+  .quoteMark {
+    left: -0.15cqw;
+    width: 2.25cqw;
+    height: 1.7cqw;
+  }
+
+  .portrait,
+  .portraitSlot {
+    width: 6.2cqw;
+    height: 6.2cqw;
+  }
+
+  .portrait {
+    border-width: 0.2cqw;
+  }
+
+  .quote {
+    margin-top: 1.05cqw;
+    font-size: max(0.9375rem, 1.3cqw);
+    line-height: 1.26;
+  }
+
+  .attribution {
+    padding-top: 1cqw;
+    padding-right: 2.8cqw;
+    font-size: max(0.6875rem, 0.78cqw);
+  }
+
+  .glyph {
+    --glyph-inset: 1.55cqw;
+    width: 2.3cqw;
+    height: 2.3cqw;
+  }
+
+  .placeholderTag {
+    margin-top: 0.9cqw;
+    font-size: max(0.625rem, 0.66cqw);
+  }
+
+  .placeholderBody {
+    margin-top: 0.6cqw;
+    font-size: max(0.9375rem, 1.22cqw);
+  }
+}
+
+/* ------------------------------------------------------------------ hover */
+
+/*
+ * Transform only, so hover never moves layout or fights the entrance (which
+ * uses the individual translate / opacity properties). The slight overshoot
+ * in the easing reads as the paper settling, both on lift and on return.
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card {
+    --settle: cubic-bezier(0.3, 1.32, 0.5, 1);
+    transition:
+      transform 560ms var(--settle),
+      box-shadow 420ms var(--ease-out);
+  }
+
+  .card:hover {
+    transform: translate3d(0, -6px, 0) scale(1.012) rotate(-0.25deg);
+  }
+
+  .card[data-tint="mint"]:hover {
+    transform: translate3d(0, -6px, 0) scale(1.012) rotate(0.25deg);
+  }
+}
+
+.card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow fades, the two headline lines rise in turn, the underline
+ * wipes in left to right, then the paragraph. Cards: left to right, 140ms
+ * apart, once the row itself is in view. Each plays once.
+ * Script-gated so nothing is left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 720ms;
+    --card-duration: 780ms;
+    --reveal-stagger: 120ms;
+    --card-stagger: 140ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .headline > .line,
+  .intro > .body {
+    opacity: 0;
+    translate: 0 24px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .headline > .line:first-child {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .headline > .line:last-child {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .intro > .body {
+    --reveal-delay: calc(var(--reveal-stagger) * 5);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease)
+      calc(var(--reveal-stagger) * 3.5);
+  }
+
+  .card {
+    opacity: 0;
+    translate: 0 28px;
+    transition:
+      opacity var(--card-duration) var(--reveal-ease) calc(var(--card) * var(--card-stagger)),
+      translate var(--card-duration) var(--reveal-ease) calc(var(--card) * var(--card-stagger)),
+      transform 560ms var(--settle, var(--ease-out)),
+      box-shadow 420ms var(--ease-out);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] .line,
+  .intro[data-revealed="true"] > .body,
+  .cardsFrame[data-revealed="true"] .card {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+}

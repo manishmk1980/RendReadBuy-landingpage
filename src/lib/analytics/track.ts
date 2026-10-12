@@ -7,13 +7,14 @@ declare global {
 }
 
 /**
- * Single dispatch point for campaign analytics. No vendor is wired yet; when
- * GTM/GA4 is approved it only needs to be connected here.
+ * Single dispatch point for campaign analytics. Events are queued in
+ * `window.dataLayer`; GTM (see `TagManager`) consumes the queue once a
+ * container is configured, including events pushed before it loaded.
  */
 export function track(event: CampaignEvent, params: CampaignEventParams = {}) {
   if (typeof window === "undefined") return;
 
-  window.dataLayer?.push({ event, ...params });
+  (window.dataLayer ??= []).push({ event, ...params });
 
   if (process.env.NODE_ENV !== "production") {
     console.debug("[campaign analytics]", event, params);

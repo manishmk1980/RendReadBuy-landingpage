@@ -24,13 +24,27 @@ export function useInView<T extends Element>({
     // isIntersecting is true for any overlap, even below the threshold.
     const minRatio = Math.min(...[threshold].flat());
 
+    /*
+     * An element taller than the viewport ÷ minRatio (short landscape
+     * screens, high zoom) can never reach minRatio, so it also counts once
+     * it fills that share of the viewport. The extra steps keep callbacks
+     * coming while it scrolls through.
+     */
+    const steps = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].filter((step) => step < minRatio);
+
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        const visible = entry.isIntersecting && entry.intersectionRatio >= minRatio;
+      (entries) => {
+        // Fast scrolling can batch several entries; only the newest is current.
+        const entry = entries[entries.length - 1];
+        const fillsViewport =
+          entry.rootBounds !== null &&
+          entry.intersectionRect.height >= entry.rootBounds.height * minRatio;
+        const visible =
+          entry.isIntersecting && (entry.intersectionRatio >= minRatio || fillsViewport);
         setInView(visible);
         if (visible && once) observer.disconnect();
       },
-      { rootMargin, threshold },
+      { rootMargin, threshold: [...steps, ...[threshold].flat()] },
     );
     observer.observe(element);
     return () => observer.disconnect();
