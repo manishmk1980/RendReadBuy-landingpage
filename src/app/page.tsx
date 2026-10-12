@@ -11,11 +11,18 @@ import { ReadingEssentialsSection } from "@/components/campaign/ReadingEssential
 import { FAQSection } from "@/components/campaign/FAQSection";
 import { FinalConversionSection } from "@/components/campaign/FinalConversionSection";
 import { CampaignFooter } from "@/components/campaign/CampaignFooter";
+import { publishedFaqs } from "@/config/faqs";
+import { DeferredArtLoader } from "@/lib/media/DeferredArtLoader";
+import { buildStructuredData, serializeJsonLd } from "@/lib/seo/structuredData";
 
 /** Section order is locked by the campaign architecture. */
 export default function CampaignPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildStructuredData(publishedFaqs)) }}
+      />
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -34,6 +41,7 @@ export default function CampaignPage() {
         <FinalConversionSection />
       </main>
       <CampaignFooter />
+      <DeferredArtLoader />
     </>
   );
 }

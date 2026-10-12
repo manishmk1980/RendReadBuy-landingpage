@@ -225,6 +225,17 @@
   }
 }
 
+/* "You are here" ring for the progression below; hidden at rest. */
+.ring {
+  position: absolute;
+  inset: -5%;
+  border: 2px solid rgb(3 123 128 / 0.55);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.45em rgb(3 123 128 / 0.07);
+  opacity: 0;
+  pointer-events: none;
+}
+
 .number {
   position: absolute;
   top: -7%;
@@ -279,11 +290,29 @@
 
 .reassurance {
   position: relative;
+  isolation: isolate;
   max-width: 26em;
   font-size: clamp(1rem, 1.2cqw, 1.45rem);
   font-weight: 500;
   line-height: 1.45;
   text-align: center;
+  text-shadow:
+    0 0 0.35em rgb(255 249 236 / 0.95),
+    0 0 1em rgb(255 244 222 / 0.75);
+}
+
+/* Feathered pool of light under the words, not a card: no edge, no fill. */
+.reassurance::before {
+  content: "";
+  position: absolute;
+  inset: -0.8em -1.2em;
+  z-index: -1;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 247 230 / 0.78),
+    rgb(255 247 230 / 0.5) 60%,
+    rgb(255 247 230 / 0)
+  );
 }
 
 .reassuranceLine {
@@ -421,27 +450,13 @@
 
   .reassurance {
     flex: none;
-    isolation: isolate;
     max-width: none;
     font-size: 1.14cqw;
     line-height: 1.38;
-    text-shadow:
-      0 0 0.35em rgb(255 249 236 / 0.95),
-      0 0 1em rgb(255 244 222 / 0.75);
   }
 
-  /* Feathered pool of light under the words, not a card: no edge, no fill. */
   .reassurance::before {
-    content: "";
-    position: absolute;
     inset: -0.8em -2.2em;
-    z-index: -1;
-    background: radial-gradient(
-      closest-side,
-      rgb(255 247 230 / 0.78),
-      rgb(255 247 230 / 0.5) 60%,
-      rgb(255 247 230 / 0)
-    );
   }
 
   .loop {
@@ -471,13 +486,11 @@
 /* ---------------------------------------------------------------- entrance */
 
 /*
- * Intro: eyebrow → headline (underline wipes in) → body. Steps: one disc at
- * a time, each arrow fading in as the disc before it settles. Reassurance:
- * on its own, once it is on screen, then its loops. Each plays once.
- * Entrances use the individual translate / scale properties and hover uses
- * transform, so a hover mid-entrance never interrupts either.
- * Script-gated so nothing is left hidden if JavaScript fails, and
- * motion-gated so reduced-motion readers get everything immediately.
+ * Intro: eyebrow → headline (underline wipes in) → body. Reassurance: on its
+ * own, once it is on screen. Each plays once. Script-gated so nothing is
+ * left hidden if JavaScript fails, and motion-gated so reduced-motion
+ * readers get everything immediately. The steps are never hidden; they get
+ * the progression below.
  */
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .section {
@@ -508,50 +521,216 @@
     transition: clip-path var(--reveal-duration) var(--reveal-ease) calc(var(--reveal-stagger) * 2.5);
   }
 
-  .bubble {
-    --reveal-delay: calc(var(--step) * var(--reveal-stagger));
-    opacity: 0;
-    translate: 0 20px;
-    scale: 0.94;
-    transition:
-      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
-      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
-      scale var(--reveal-duration) var(--reveal-ease) var(--reveal-delay),
-      transform 520ms cubic-bezier(0.34, 1.45, 0.64, 1);
-  }
-
-  .arrow {
-    opacity: 0;
-    translate: -6px 0;
-    transition:
-      opacity 500ms var(--reveal-ease) calc(var(--step) * var(--reveal-stagger) + 260ms),
-      translate 500ms var(--reveal-ease) calc(var(--step) * var(--reveal-stagger) + 260ms);
-  }
-
-  /* After the message, each loop easing out from it towards its book stack. */
-  .loop {
-    opacity: 0;
-    translate: 8px 0;
-    transition:
-      opacity 600ms var(--reveal-ease) 320ms,
-      translate 600ms var(--reveal-ease) 320ms;
-  }
-
-  .loopEnd {
-    translate: -8px 0;
-  }
-
   .intro[data-revealed="true"] > *,
-  .reassuranceFrame[data-revealed="true"] .reassurance,
-  .reassuranceFrame[data-revealed="true"] .loop,
-  .stepsFrame[data-revealed="true"] .bubble,
-  .stepsFrame[data-revealed="true"] .arrow {
+  .reassuranceFrame[data-revealed="true"] .reassurance {
     opacity: 1;
     translate: 0 0;
-    scale: 1;
   }
 
   .intro[data-revealed="true"] .underline {
     clip-path: inset(-20% -10% -20% 0);
+  }
+}
+
+/* ------------------------------------------------------------- progression */
+
+/*
+ * Signature moment: the cycle is walked in reading order. Each step lights up
+ * in turn (its disc settles, its badge fills, a ring marks it as the current
+ * step), the arrow to the next step draws, and after step 4 the loops draw
+ * back from the message to the book stacks: choose, read, return, choose
+ * again.
+ *
+ * Scroll-directed where supported: mapped onto the steps' own pass through
+ * the viewport (--cycle), so it follows the reader's pace, reverses on the
+ * way back up, and never pins or captures the scroll. Elsewhere it plays once
+ * on reveal. Only decoration changes: labels keep full contrast at every
+ * scroll position, and without motion or JavaScript the steps simply rest in
+ * their finished state.
+ *
+ * Step i (--step, 0–3) owns the range --cycle-start + i × --cycle-step.
+ */
+@keyframes cycle-lift {
+  from {
+    translate: 0 var(--cycle-lift);
+    scale: 0.95;
+  }
+}
+
+@keyframes cycle-badge {
+  from {
+    background-color: #efe6d3;
+    color: rgb(18 32 58 / 0.5);
+    scale: 0.82;
+  }
+  55% {
+    background-color: var(--color-brand);
+    color: #fff;
+    scale: 1.14;
+  }
+  to {
+    background-color: #bfe5dc;
+    color: var(--color-ink);
+    scale: 1;
+  }
+}
+
+@keyframes cycle-icon {
+  from {
+    opacity: 0.3;
+    translate: 0 0.25em;
+  }
+}
+
+@keyframes cycle-ring {
+  0% {
+    opacity: 0;
+    scale: 0.92;
+  }
+  30%,
+  70% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.04;
+  }
+}
+
+@keyframes cycle-draw {
+  from {
+    clip-path: inset(-30% 100% -30% 0);
+  }
+  to {
+    clip-path: inset(-30% -10% -30% 0);
+  }
+}
+
+/* The loop is drawn for the left side, from the message (right) outwards. */
+@keyframes cycle-draw-back {
+  from {
+    clip-path: inset(-30% 0 -30% 100%);
+  }
+  to {
+    clip-path: inset(-30% 0 -30% -10%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .section {
+    --cycle-lift: 12px;
+    --cycle-start: 16%;
+    --cycle-step: 9%;
+  }
+
+  .bubble {
+    animation-name: cycle-lift;
+    animation-timing-function: var(--ease-out);
+  }
+
+  .number {
+    animation-name: cycle-badge;
+  }
+
+  .icon {
+    animation-name: cycle-icon;
+  }
+
+  .ring {
+    animation-name: cycle-ring;
+  }
+
+  .arrow {
+    animation-name: cycle-draw;
+  }
+
+  .loop {
+    animation-name: cycle-draw-back;
+  }
+
+  :is(.bubble, .number, .icon, .ring, .arrow, .loop) {
+    animation-fill-mode: both;
+  }
+}
+
+/* Phones and tablets: the 2 × 2 grid is taller, so each step gets more scroll. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 1023px) {
+  .section {
+    --cycle-lift: 8px;
+    --cycle-start: 16%;
+    --cycle-step: 8.5%;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .content {
+      timeline-scope: --cycle;
+    }
+
+    .stepsFrame {
+      view-timeline: --cycle block;
+    }
+
+    :is(.bubble, .number, .icon, .ring, .arrow, .loop) {
+      animation-duration: auto;
+      animation-timeline: --cycle;
+    }
+
+    .bubble,
+    .number,
+    .icon {
+      animation-range:
+        cover calc(var(--cycle-start) + var(--step) * var(--cycle-step))
+        cover calc(var(--cycle-start) + (var(--step) + 1) * var(--cycle-step));
+    }
+
+    /* Current from its own start until the next step has taken over. */
+    .ring {
+      animation-range:
+        cover calc(var(--cycle-start) + var(--step) * var(--cycle-step))
+        cover calc(var(--cycle-start) + (var(--step) + 2) * var(--cycle-step));
+    }
+
+    .arrow {
+      animation-range:
+        cover calc(var(--cycle-start) + (var(--step) + 0.6) * var(--cycle-step))
+        cover calc(var(--cycle-start) + (var(--step) + 1.2) * var(--cycle-step));
+    }
+
+    .loop {
+      animation-range:
+        cover calc(var(--cycle-start) + 4 * var(--cycle-step))
+        cover calc(var(--cycle-start) + 5 * var(--cycle-step));
+    }
+  }
+}
+
+/* Without scroll-driven animations: the same sequence, once, on reveal. */
+@supports not (animation-timeline: view()) {
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    :is(.bubble, .number, .icon, .ring, .arrow, .loop) {
+      animation-duration: 700ms;
+      animation-delay: calc(var(--step, 0) * 420ms);
+      animation-play-state: paused;
+    }
+
+    .ring {
+      animation-duration: 1000ms;
+    }
+
+    .arrow {
+      animation-delay: calc(var(--step) * 420ms + 300ms);
+    }
+
+    .loop {
+      animation-delay: 320ms;
+    }
+
+    .stepsFrame[data-revealed="true"] :is(.bubble, .number, .icon, .ring, .arrow),
+    .reassuranceFrame[data-revealed="true"] .loop {
+      animation-play-state: running;
+    }
   }
 }

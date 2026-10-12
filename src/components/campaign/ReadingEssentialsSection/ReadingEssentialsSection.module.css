@@ -1,0 +1,696 @@
+/*
+ * Reading essentials: one static artwork with semantic copy on the parchment
+ * wall and a product carousel over the window and table.
+ *
+ * The artwork (1746 × 901) carries the parchment wall, the window, the book
+ * stack and mug (their titles printed in the image), the daisies and a torn
+ * edge at both ends. It shares section 8's geometry, so the boundary is the
+ * same: section 8's baked bottom tear is the single edge between the two;
+ * this artwork's top tear is lifted away and the scene cross-fades up out of
+ * that section's teal band.
+ */
+
+/* Clips sideways only, so the backdrop can blend up into the section above. */
+.section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  background: #fcf1dc;
+  color: var(--color-ink);
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+/*
+ * Below desktop the scene is a band between the copy and the carousel,
+ * cropped to the books, mug and window (source x ~20–1020, y ~230–792) and
+ * clear of both baked tears, which the fades soften into the cream.
+ */
+.backdrop {
+  --drift-x: 5px;
+  --drift-y: 4px;
+  --scroll-travel: 6px;
+  position: relative;
+  order: 2;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 86%, transparent 100%);
+}
+
+.artwork {
+  position: absolute;
+  top: -40.9%;
+  left: -2%;
+  width: 174.6%;
+  aspect-ratio: 1746 / 901;
+  background: var(--re-art) no-repeat 0 0 / 100% 100%;
+  transform: translate3d(
+    calc(var(--re-px, 0) * var(--drift-x)),
+    calc(
+      var(--re-py, 0) * var(--drift-y) + (0.5 - var(--scroll-progress, 0.5)) * 2 *
+        var(--scroll-travel)
+    ),
+    0
+  );
+}
+
+/* The copy and the carousel join the section's flow on either side of the band. */
+.content {
+  display: contents;
+}
+
+.intro {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-5);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.2cqw, 4.6rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  display: inline-block;
+  color: var(--color-brand-strong);
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 92%;
+  height: 0.2em;
+  margin-top: -0.04em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 24em;
+  margin-top: 1em;
+  font-size: clamp(1.0625rem, 1.35cqw, 1.55rem);
+  line-height: 1.45;
+}
+
+.shelf {
+  --card-gap: var(--space-4);
+  --nav-size: 2.75rem;
+  position: relative;
+  z-index: 1;
+  order: 3;
+  margin-top: calc(var(--space-6) * -1);
+  padding: 0 var(--container-gutter) var(--space-9);
+}
+
+.reviewFlag {
+  width: fit-content;
+  margin-bottom: var(--space-3);
+  padding: 0.35em 0.8em;
+  border: 1px dashed var(--color-accent);
+  border-radius: 999px;
+  background: rgb(255 250 241 / 0.85);
+  color: #9a3f22;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------- carousel */
+
+/* Track full width with the arrows beneath it; desktop flanks the track. */
+.carousel {
+  display: grid;
+  grid-template-areas:
+    "viewport viewport viewport"
+    ". previous next";
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/*
+ * Native horizontal scroller: swipe, trackpad and no-JS scrolling all work.
+ * The block padding (cancelled by the margin) keeps hover lift and card
+ * shadows inside the scroller's clip.
+ */
+.viewport {
+  grid-area: viewport;
+  min-width: 0;
+  margin-block: -10px -30px;
+  padding-block: 10px 30px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+}
+
+.track {
+  display: flex;
+  gap: var(--card-gap);
+  padding: 0;
+  list-style: none;
+}
+
+/* Auto margins centre a short row without hiding overflow from the scroller. */
+.slide {
+  display: flex;
+  flex: 0 0 min(80%, 19rem);
+  scroll-snap-align: start;
+}
+
+.slide:first-child {
+  margin-inline-start: auto;
+}
+
+.slide:last-child {
+  margin-inline-end: auto;
+}
+
+.nav {
+  display: grid;
+  place-items: center;
+  width: var(--nav-size);
+  height: var(--nav-size);
+  padding: 0;
+  border: 1px solid rgb(18 32 58 / 0.08);
+  border-radius: 50%;
+  background: rgb(255 252 246 / 0.94);
+  color: var(--color-ink);
+  box-shadow: 0 8px 18px -10px rgb(70 48 20 / 0.55);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.nav[data-direction="previous"] {
+  grid-area: previous;
+}
+
+.nav[data-direction="next"] {
+  grid-area: next;
+}
+
+.nav svg {
+  width: 46%;
+  height: 46%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav:not([aria-disabled="true"]):hover {
+  background: var(--color-surface);
+  color: var(--color-brand-strong);
+}
+
+/* Dimmed without opacity, so a focus ring on a disabled arrow stays clear. */
+.nav[aria-disabled="true"] {
+  background: rgb(255 252 246 / 0.6);
+  color: rgb(18 32 58 / 0.32);
+  box-shadow: none;
+  cursor: default;
+}
+
+.nav:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+/* Nothing to scroll: no arrows rather than two dead ones. */
+.carousel[data-overflowing="false"] .nav {
+  display: none;
+}
+
+.disclosure {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: var(--space-4);
+  padding: 0.3em 0.75em;
+  border-radius: 0.4rem;
+  background: rgb(255 250 241 / 0.88);
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------- card */
+
+/* Warm cream paper; every card stretches to the row's height. */
+.card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0.55rem;
+  border: 1px solid rgb(255 255 255 / 0.75);
+  border-radius: 0.75rem;
+  background: linear-gradient(165deg, rgb(255 253 248 / 0.97), rgb(251 244 231 / 0.95));
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 18px 32px -24px rgb(70 48 20 / 0.6);
+  transition:
+    translate var(--duration-slow) var(--ease-out),
+    box-shadow var(--duration-slow) var(--ease-out);
+}
+
+.imageSlot {
+  position: relative;
+  flex: none;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: linear-gradient(160deg, #f8efdf, #f1e5d0);
+}
+
+.image {
+  object-fit: contain;
+  transition: scale var(--duration-slow) var(--ease-out);
+}
+
+.imagePlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  padding: 1em;
+  color: #8a7458;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.placeholderIcon {
+  width: 2.6em;
+  height: auto;
+  fill: none;
+  stroke: #b49a76;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0.85rem 0.65rem 0.55rem;
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variation-settings: "opsz" 36;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.cardText {
+  margin: 0.45em 0 var(--space-4);
+  color: var(--color-ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+/* margin-top: auto pins every CTA to its card's bottom edge. */
+.card :is(a, span).cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 2.75rem;
+  margin-top: auto;
+  padding: 0 0.9em;
+  border: 1.5px solid var(--color-brand-strong);
+  border-radius: 0.45rem;
+  background: rgb(255 255 255 / 0.6);
+  color: var(--color-brand-strong);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.ctaArrow {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate var(--duration-base) var(--ease-out);
+}
+
+/* Development preview only: visibly inert, so it never reads as clickable. */
+.card span.cta[data-preview="true"] {
+  border-style: dashed;
+  border-color: rgb(2 102 106 / 0.45);
+  background: transparent;
+  color: rgb(2 102 106 / 0.7);
+  cursor: not-allowed;
+}
+
+.card a.cta:hover {
+  background: var(--color-brand-soft);
+}
+
+.card a.cta:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+/* -------------------------------------------------------------- tablet */
+
+@media (min-width: 768px) {
+  .slide {
+    flex-basis: calc((100% - var(--card-gap)) / 2);
+  }
+}
+
+@media (min-width: 1024px) {
+  .slide {
+    flex-basis: calc((100% - var(--card-gap) * 2) / 3);
+  }
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1746 × 901), from 1200px like sections 5–8. Landmarks, in
+ * source rows:
+ *   top tear              y 0–~110, lifted out of the section
+ *   parchment wall        x 0–650,  y 60–500
+ *   window frame          x 650–1610, y 80–540
+ *   book stack (printed)  x 35–460,  y 500–720
+ *   mug (printed)         x 470–660, y 500–660
+ *   bottom tear           y ~790–901, left visible for the next section
+ * The copy stays on the wall above the books and mug; three cards span the
+ * window and table (x ~742–1653), arrows just outside them.
+ */
+@media (min-width: 1200px) {
+  .section {
+    --art-lift: calc(150 / 1746 * 100cqw);
+    --blend: 3.4cqw;
+    display: block;
+    aspect-ratio: 1746 / 751;
+    background: none;
+  }
+
+  /* Eased fade on the static frame, so drift never moves the seam. */
+  .backdrop {
+    --overscan: 16px;
+    position: absolute;
+    inset: calc(var(--blend) * -1) 0 0;
+    aspect-ratio: auto;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgb(0 0 0 / 0.05) calc(var(--blend) * 0.3),
+      rgb(0 0 0 / 0.15) calc(var(--blend) * 0.48),
+      rgb(0 0 0 / 0.38) calc(var(--blend) * 0.64),
+      rgb(0 0 0 / 0.68) calc(var(--blend) * 0.8),
+      rgb(0 0 0 / 0.9) calc(var(--blend) * 0.92),
+      #000 var(--blend)
+    );
+  }
+
+  /*
+   * Twice the overscan sideways makes the image tall enough to overscan the
+   * bottom edge too, since its height follows its width.
+   */
+  .artwork {
+    inset: calc(var(--blend) - var(--art-lift) - var(--overscan)) calc(var(--overscan) * -2) auto;
+    width: auto;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  /* Protected text column on the parchment wall, above the books and mug. */
+  .intro {
+    position: absolute;
+    top: 2.2cqw;
+    left: 6.4cqw;
+    width: 31cqw;
+    padding: 0;
+  }
+
+  .eyebrow {
+    font-size: max(0.72rem, 0.86cqw);
+  }
+
+  .headline {
+    margin-top: 0.55em;
+    font-size: 2.8cqw;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .body {
+    max-width: 21em;
+    margin-top: 1.05em;
+    font-size: 1.22cqw;
+    line-height: 1.42;
+  }
+
+  /*
+   * Three 16.6cqw cards with 1.2cqw gaps make a 52.2cqw track starting at
+   * 42.5cqw; the arrows sit in their own columns either side.
+   */
+  .shelf {
+    --card-gap: 1.2cqw;
+    --nav-size: max(2.75rem, 2.7cqw);
+    --nav-gap: 0.9cqw;
+    position: absolute;
+    top: calc((278 - 150) / 1746 * 100cqw);
+    left: calc(42.5cqw - var(--nav-gap) - var(--nav-size));
+    margin: 0;
+    padding: 0;
+  }
+
+  .reviewFlag {
+    position: absolute;
+    bottom: calc(100% + 0.8cqw);
+    left: calc(var(--nav-size) + var(--nav-gap));
+    margin: 0;
+    font-size: max(0.75rem, 0.8cqw);
+  }
+
+  .carousel {
+    grid-template-areas: "previous viewport next";
+    grid-template-columns: var(--nav-size) 52.2cqw var(--nav-size);
+    column-gap: var(--nav-gap);
+  }
+
+  /* Keep the arrow columns, so a short row stays centred on the window. */
+  .carousel[data-overflowing="false"] .nav {
+    display: grid;
+    visibility: hidden;
+  }
+
+  /* Centred under the track, so it stays with a short, centred row too. */
+  .disclosure {
+    max-width: 52.2cqw;
+    margin: 0.9cqw auto 0;
+    font-size: max(0.75rem, 0.78cqw);
+    text-align: center;
+  }
+
+  .card {
+    padding: 0.5cqw;
+    border-radius: 0.75cqw;
+  }
+
+  .imageSlot {
+    border-radius: 0.5cqw;
+  }
+
+  .imagePlaceholder {
+    font-size: max(0.75rem, 0.8cqw);
+  }
+
+  .cardBody {
+    padding: 0.85cqw 0.6cqw 0.45cqw;
+  }
+
+  .cardTitle {
+    font-size: max(1.0625rem, 1.32cqw);
+  }
+
+  .cardText {
+    margin-bottom: max(0.9rem, 1cqw);
+    font-size: max(0.8125rem, 0.9cqw);
+  }
+
+  .card :is(a, span).cta {
+    min-height: max(2.5rem, 2.55cqw);
+    border-radius: 0.4cqw;
+    font-size: max(0.8125rem, 0.92cqw);
+  }
+}
+
+/* ------------------------------------------------------------------ hover */
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.8) inset,
+      0 26px 40px -24px rgb(70 48 20 / 0.7);
+  }
+}
+
+/* A small lift; transform only, so layout and the track never move. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    translate: 0 -5px;
+  }
+
+  .card:hover .image {
+    scale: 1.03;
+  }
+
+  .card a.cta:hover .ctaArrow {
+    translate: 0.18em 0;
+  }
+}
+
+/* ------------------------------------------------------------- scripting */
+
+/* Without JavaScript the arrows cannot work, so the scrollbar stays instead. */
+@media (scripting: none) {
+  .carousel .nav {
+    display: none;
+  }
+}
+
+@media (scripting: enabled) {
+  .viewport {
+    scrollbar-width: none;
+  }
+
+  .viewport::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow fades, the two headline lines rise in turn, the underline
+ * wipes in left to right, then the paragraph. Carousel: rises gently with
+ * opacity once in view, held back a beat so it follows the intro. Each plays
+ * once. Script-gated so nothing is left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 720ms;
+    --shelf-duration: 820ms;
+    --reveal-stagger: 120ms;
+    --shelf-hold: 420ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .headline > .line,
+  .intro > .body {
+    opacity: 0;
+    translate: 0 24px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .headline > .line:nth-child(1) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .headline > .line:nth-child(2) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .intro > .body {
+    --reveal-delay: calc(var(--reveal-stagger) * 5.5);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease)
+      calc(var(--reveal-stagger) * 3.5);
+  }
+
+  .shelf > * {
+    opacity: 0;
+    translate: 0 28px;
+    transition:
+      opacity var(--shelf-duration) var(--reveal-ease) var(--shelf-hold),
+      translate var(--shelf-duration) var(--reveal-ease) var(--shelf-hold);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] .line,
+  .intro[data-revealed="true"] > .body,
+  .shelf[data-revealed="true"] > * {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+}

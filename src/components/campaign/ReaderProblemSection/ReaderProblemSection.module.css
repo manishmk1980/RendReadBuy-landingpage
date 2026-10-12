@@ -172,6 +172,15 @@
   line-height: 1.55;
 }
 
+/* Narrow screens: the lines' ends can reach the scene behind the veil. */
+@media (max-width: 1023px) {
+  .body {
+    text-shadow:
+      0 0 0.3em var(--color-paper),
+      0 0 0.8em color-mix(in srgb, var(--color-paper) 80%, transparent);
+  }
+}
+
 /* ---------------------------------------------------------------- desktop */
 
 @media (min-width: 1024px) {

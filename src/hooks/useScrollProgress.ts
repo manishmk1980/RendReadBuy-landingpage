@@ -43,8 +43,9 @@ export function useScrollProgress<T extends HTMLElement>(): RefObject<T | null> 
       if (active && !frame) frame = requestAnimationFrame(update);
     };
 
-    const observer = new IntersectionObserver(([entry]) => {
-      active = entry.isIntersecting;
+    const observer = new IntersectionObserver((entries) => {
+      // Fast scrolling can batch several entries; only the newest is current.
+      active = entries[entries.length - 1].isIntersecting;
       if (active) onScroll();
     });
     observer.observe(element);

@@ -18,7 +18,7 @@ export function SilverCycleSection() {
       labelledBy="silver-cycle-heading"
       className={styles.section}
     >
-      <div className={styles.backdrop} aria-hidden="true">
+      <div className={styles.backdrop} aria-hidden="true" data-deferred-art="">
         <div className={styles.artwork} />
       </div>
       <TornPaperTransition
@@ -55,6 +55,7 @@ export function SilverCycleSection() {
                 style={{ "--step": index } as CSSProperties}
               >
                 <div className={styles.bubble}>
+                  <span className={styles.ring} aria-hidden="true" />
                   <span className={styles.number} aria-hidden="true">
                     {index + 1}
                   </span>

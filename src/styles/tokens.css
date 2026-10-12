@@ -30,11 +30,14 @@
   /*
    * Typography: three voices from the approved hero creative. Families are
    * self-hosted via next/font in src/app/layout.tsx (closest Google matches
-   * pending the brand's licensed campaign fonts).
+   * pending the brand's licensed campaign fonts). The --font-rupee-* faces
+   * cover only U+20B9 and must stay first in their stacks.
    */
-  --font-display: var(--font-editorial-serif), Georgia, "Times New Roman", serif;
-  --font-body: var(--font-clean-sans), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-rupee-serif), var(--font-editorial-serif), Georgia,
+    "Times New Roman", serif;
+  --font-body: var(--font-rupee-sans), var(--font-clean-sans), ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
   --font-hand: var(--font-handwritten), "Segoe Print", "Bradley Hand", cursive;
 
   --weight-regular: 400;

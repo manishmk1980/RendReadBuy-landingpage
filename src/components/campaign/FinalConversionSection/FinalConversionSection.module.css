@@ -1,0 +1,760 @@
+/*
+ * Final conversion: one static artwork with the closing headline on the
+ * parchment wall and a torn paper conversion panel over the window and table.
+ *
+ * The artwork (1914 × 822) carries the parchment wall, the window, the book
+ * stack and mug (their titles printed in the image), the plants, the open
+ * book and a torn edge at the top. Like sections 8–10, the previous section's
+ * baked bottom tear is the single edge between the two: this artwork's top
+ * tear is lifted away and the scene cross-fades up out of the FAQ's band.
+ * The artwork has no bottom tear; its last rows soften into the footer.
+ */
+
+/* Clips sideways only, so the backdrop can blend up into the section above. */
+.section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  background: #fcf1dc;
+  color: var(--color-ink);
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+/*
+ * Below desktop the scene is a band between the headline and the panel,
+ * cropped to the books, mug and window (source x ~20–1220, y ~140–815) and
+ * clear of the baked tear, which the fades soften.
+ */
+.backdrop {
+  --drift-x: 5px;
+  --drift-y: 3px;
+  --scroll-travel: 5px;
+  position: relative;
+  order: 2;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 86%, transparent 100%);
+}
+
+.artwork {
+  position: absolute;
+  top: -20.7%;
+  left: -1%;
+  width: 159.5%;
+  aspect-ratio: 1914 / 822;
+  background: var(--fc-art) no-repeat 0 0 / 100% 100%;
+  transform: translate3d(
+    calc(var(--fc-px, 0) * var(--drift-x)),
+    calc(
+      var(--fc-py, 0) * var(--drift-y) + (0.5 - var(--scroll-progress, 0.5)) * 2 *
+        var(--scroll-travel)
+    ),
+    0
+  );
+}
+
+/* The headline and the panel join the section's flow on either side of the band. */
+.content {
+  display: contents;
+}
+
+.intro {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(var(--space-7), 12cqw, var(--space-9)) var(--container-gutter) var(--space-4);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7.4cqw, 3.4rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  width: fit-content;
+  color: var(--color-brand-strong);
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 96%;
+  height: 0.2em;
+  margin-top: -0.02em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.panelFrame {
+  position: relative;
+  z-index: 1;
+  order: 3;
+  margin-top: calc(var(--space-7) * -1);
+  padding: 0 var(--container-gutter) var(--space-8);
+  filter: drop-shadow(0 14px 18px rgb(70 48 20 / 0.24)) drop-shadow(0 2px 3px rgb(70 48 20 / 0.12));
+}
+
+/*
+ * A sheet of warm paper with torn top and bottom edges. The edge is a
+ * clip-path, so the frame above carries the shadow.
+ */
+.panel {
+  --tear: 7px;
+  display: grid;
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: calc(var(--tear) + var(--space-6)) var(--space-5) calc(var(--tear) + var(--space-6));
+  background:
+    radial-gradient(120% 90% at 18% 10%, rgb(255 255 255 / 0.55), transparent 60%),
+    radial-gradient(90% 80% at 92% 100%, rgb(232 214 182 / 0.35), transparent 70%),
+    linear-gradient(172deg, #fdf8ee, #f8efdd);
+  clip-path: polygon(
+    0% calc(var(--tear) * 0.15),
+    2.94% calc(var(--tear) * 0.93),
+    5.88% calc(var(--tear) * 0.4),
+    8.82% calc(var(--tear) * 0.33),
+    11.76% calc(var(--tear) * 0.77),
+    14.71% calc(var(--tear) * 0.6),
+    17.65% calc(var(--tear) * 0.43),
+    20.59% calc(var(--tear) * 0.79),
+    23.53% calc(var(--tear) * 0.79),
+    26.47% calc(var(--tear) * 0.61),
+    29.41% calc(var(--tear) * 0.73),
+    32.35% calc(var(--tear) * 0.69),
+    35.29% calc(var(--tear) * 0.84),
+    38.24% calc(var(--tear) * 0.36),
+    41.18% calc(var(--tear) * 0.47),
+    44.12% calc(var(--tear) * 0.75),
+    47.06% calc(var(--tear) * 0.74),
+    50% calc(var(--tear) * 0.2),
+    52.94% calc(var(--tear) * 0.73),
+    55.88% calc(var(--tear) * 0.55),
+    58.82% calc(var(--tear) * 0.93),
+    61.76% calc(var(--tear) * 0.84),
+    64.71% calc(var(--tear) * 0.25),
+    67.65% calc(var(--tear) * 0.59),
+    70.59% calc(var(--tear) * 0.93),
+    73.53% calc(var(--tear) * 0.74),
+    76.47% calc(var(--tear) * 0.7),
+    79.41% calc(var(--tear) * 0.64),
+    82.35% calc(var(--tear) * 0.93),
+    85.29% calc(var(--tear) * 0.92),
+    88.24% calc(var(--tear) * 0.47),
+    91.18% calc(var(--tear) * 0.44),
+    94.12% calc(var(--tear) * 0.86),
+    97.06% calc(var(--tear) * 0.43),
+    100% calc(var(--tear) * 0.28),
+    100% calc(100% - var(--tear) * 0.4),
+    97.06% calc(100% - var(--tear) * 0.51),
+    94.12% calc(100% - var(--tear) * 0.4),
+    91.18% calc(100% - var(--tear) * 0.95),
+    88.24% calc(100% - var(--tear) * 0.62),
+    85.29% calc(100% - var(--tear) * 0.77),
+    82.35% calc(100% - var(--tear) * 0.9),
+    79.41% calc(100% - var(--tear) * 0.2),
+    76.47% calc(100% - var(--tear) * 0.38),
+    73.53% calc(100% - var(--tear) * 0.63),
+    70.59% calc(100% - var(--tear) * 0.58),
+    67.65% calc(100% - var(--tear) * 0.51),
+    64.71% calc(100% - var(--tear) * 0.31),
+    61.76% calc(100% - var(--tear) * 0.92),
+    58.82% calc(100% - var(--tear) * 0.2),
+    55.88% calc(100% - var(--tear) * 0.46),
+    52.94% calc(100% - var(--tear) * 0.44),
+    50% calc(100% - var(--tear) * 0.71),
+    47.06% calc(100% - var(--tear) * 0.94),
+    44.12% calc(100% - var(--tear) * 0.59),
+    41.18% calc(100% - var(--tear) * 0.29),
+    38.24% calc(100% - var(--tear) * 0.49),
+    35.29% calc(100% - var(--tear) * 0.39),
+    32.35% calc(100% - var(--tear) * 0.46),
+    29.41% calc(100% - var(--tear) * 0.51),
+    26.47% calc(100% - var(--tear) * 0.43),
+    23.53% calc(100% - var(--tear) * 0.6),
+    20.59% calc(100% - var(--tear) * 0.67),
+    17.65% calc(100% - var(--tear) * 0.35),
+    14.71% calc(100% - var(--tear) * 0.92),
+    11.76% calc(100% - var(--tear) * 0.54),
+    8.82% calc(100% - var(--tear) * 0.88),
+    5.88% calc(100% - var(--tear) * 0.69),
+    2.94% calc(100% - var(--tear) * 0.69),
+    0% calc(100% - var(--tear) * 0.59)
+  );
+}
+
+/* ----------------------------------------------------------- Silver offer */
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.offerHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kicker {
+  color: var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.offerHeadline {
+  margin-top: 0.45em;
+  font-size: clamp(1.75rem, 7cqw, 2.5rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: initial;
+}
+
+.offerLine {
+  display: block;
+}
+
+.offerEmphasis {
+  color: var(--color-brand-strong);
+}
+
+/* The offer's figure, set in the display face like the hero's ₹899. */
+.price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 0.4em;
+  margin-top: 0.7em;
+  color: var(--color-ink);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.amount {
+  position: relative;
+  padding-inline: 0.1em;
+  font-family: var(--font-display);
+  font-size: 1.75em;
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.priceCircle {
+  position: absolute;
+  top: -0.24em;
+  left: -0.3em;
+  width: calc(100% + 0.6em);
+  height: calc(100% + 0.42em);
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.priceCircle path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--space-5);
+}
+
+.actions a.cta {
+  width: 100%;
+  max-width: 22rem;
+  min-height: 3.25rem;
+  padding: 0 1.35em;
+  gap: 0.6em;
+  border-radius: 0.4rem;
+  background: var(--color-brand-strong);
+  color: var(--color-surface);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  box-shadow: 0 10px 22px -14px rgb(2 84 88 / 0.85);
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.actions a.cta:hover {
+  background: color-mix(in srgb, var(--color-brand-strong) 82%, var(--color-ink));
+  box-shadow: 0 16px 28px -14px rgb(2 84 88 / 0.95);
+}
+
+.actions a.cta:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+.arrow {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate var(--duration-base) var(--ease-out);
+}
+
+.actions a.cta:hover .arrow {
+  translate: 0.22em 0;
+}
+
+/* -------------------------------------------------------------- fallback */
+
+/* Divided from the offer by a hairline: a quieter, secondary decision. */
+.fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid rgb(18 32 58 / 0.14);
+  text-align: center;
+}
+
+.fallbackIcon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-brand-soft);
+}
+
+.rays {
+  position: absolute;
+  top: -12%;
+  left: 50%;
+  width: 190%;
+  translate: -50% 0;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.bookIcon {
+  width: 56%;
+  fill: none;
+  stroke: var(--color-brand-strong);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.fallbackTitle {
+  margin-top: 0.8em;
+  font-size: 1.1875rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fallbackBody {
+  max-width: 16em;
+  margin-top: 0.45em;
+  color: var(--color-ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.fallback a.fallbackLink {
+  gap: 0.4em;
+  margin-top: 0.5em;
+  color: var(--color-ink);
+  font-size: 1rem;
+  white-space: nowrap;
+  text-decoration-color: rgb(18 32 58 / 0.4);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  transition:
+    color var(--duration-base) var(--ease-standard),
+    text-decoration-color var(--duration-base) var(--ease-standard);
+}
+
+.fallback a.fallbackLink:hover {
+  color: var(--color-brand-strong);
+  text-decoration-color: currentColor;
+}
+
+.fallback a.fallbackLink:hover .arrow {
+  translate: 0.18em 0;
+}
+
+/* -------------------------------------------------------------- tablet */
+
+/* The offer and the fallback sit side by side, divided by a vertical rule. */
+@media (min-width: 768px) {
+  .panel {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    align-items: center;
+    max-width: 52rem;
+    padding-inline: var(--space-6);
+  }
+
+  .fallback {
+    align-self: stretch;
+    justify-content: center;
+    margin: 0 0 0 var(--space-6);
+    padding: 0 0 0 var(--space-6);
+    border-top: 0;
+    border-left: 1px solid rgb(18 32 58 / 0.14);
+  }
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1914 × 822), from 1200px like sections 5–10. Landmarks, in
+ * source rows:
+ *   top tear              y 0–~90, lifted out of the section
+ *   foliage (top-left)    x 0–560,  y 0–140
+ *   parchment wall        x 80–630, y 60–450
+ *   left window post      x 632–715
+ *   book stack (printed)  x 50–505, y 450–700
+ *   plant behind the mug  x 495–820, y 400–640
+ *   mug (printed)         x 510–720, y 520–700
+ *   right window post     x 1615–1750; daisy pot x 1680–1914, y 220–560
+ *   open book             x 680–1500, y 710–822 (cut by the image edge)
+ * The headline stays on the wall, left of the window post and above the
+ * books and plant. The panel spans the window and table (x ~815–1830,
+ * y ~330–700), clear of the mug and above the open book.
+ */
+@media (min-width: 1200px) {
+  .section {
+    --art-lift: calc(140 / 1914 * 100cqw);
+    --blend: 2.9cqw;
+    --fade-out: 1.6cqw;
+    display: block;
+    aspect-ratio: 1914 / 682;
+    background: none;
+  }
+
+  /*
+   * Eased fade on the static frame, so drift never moves the seam. The last
+   * rows soften into the footer rather than ending on a hard crop.
+   */
+  .backdrop {
+    --overscan: 16px;
+    position: absolute;
+    inset: calc(var(--blend) * -1) 0 0;
+    aspect-ratio: auto;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgb(0 0 0 / 0.05) calc(var(--blend) * 0.3),
+      rgb(0 0 0 / 0.15) calc(var(--blend) * 0.48),
+      rgb(0 0 0 / 0.38) calc(var(--blend) * 0.64),
+      rgb(0 0 0 / 0.68) calc(var(--blend) * 0.8),
+      rgb(0 0 0 / 0.9) calc(var(--blend) * 0.92),
+      #000 var(--blend),
+      #000 calc(100% - var(--fade-out)),
+      rgb(0 0 0 / 0.55) calc(100% - var(--fade-out) * 0.4),
+      transparent 100%
+    );
+  }
+
+  /*
+   * Twice the overscan sideways makes the image tall enough to overscan the
+   * bottom edge too, since its height follows its width.
+   */
+  .artwork {
+    inset: calc(var(--blend) - var(--art-lift) - var(--overscan)) calc(var(--overscan) * -2) auto;
+    width: auto;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  /* Protected text column on the parchment wall, above the books and plant. */
+  .intro {
+    position: absolute;
+    top: 2cqw;
+    left: 6cqw;
+    width: 26cqw;
+    padding: 0;
+  }
+
+  .eyebrow {
+    font-size: max(0.72rem, 0.78cqw);
+  }
+
+  .headline {
+    margin-top: 0.55em;
+    font-size: 2.5cqw;
+    line-height: 1.08;
+    white-space: nowrap;
+  }
+
+  .panelFrame {
+    position: absolute;
+    top: calc((330 - 140) / 1914 * 100cqw);
+    left: calc(815 / 1914 * 100cqw);
+    width: calc((1830 - 815) / 1914 * 100cqw);
+    margin: 0;
+    padding: 0;
+    filter: drop-shadow(0 1cqw 1.2cqw rgb(70 48 20 / 0.26))
+      drop-shadow(0 0.15cqw 0.25cqw rgb(70 48 20 / 0.14));
+  }
+
+  .panel {
+    --tear: 0.5cqw;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    max-width: none;
+    padding: calc(var(--tear) + 2cqw) 1.6cqw calc(var(--tear) + 2.1cqw);
+  }
+
+  .kicker {
+    font-size: max(0.6875rem, 0.74cqw);
+  }
+
+  .offerHeadline {
+    font-size: 2.35cqw;
+  }
+
+  .price {
+    margin-top: 0.5em;
+    font-size: max(1rem, 1.3cqw);
+  }
+
+  .actions {
+    margin-top: 1.25cqw;
+  }
+
+  .actions a.cta {
+    width: auto;
+    min-width: 26cqw;
+    max-width: none;
+    min-height: max(3rem, 3.4cqw);
+    padding: 0 1.6cqw;
+    border-radius: 0.35cqw;
+    font-size: max(1rem, 1.15cqw);
+  }
+
+  .fallback {
+    margin-left: 1.6cqw;
+    padding-left: 1.6cqw;
+  }
+
+  .fallbackIcon {
+    width: 3.9cqw;
+  }
+
+  .fallbackTitle {
+    margin-top: 0.75em;
+    font-size: max(1rem, 1.12cqw);
+  }
+
+  .fallbackBody {
+    max-width: 15em;
+    margin-top: 0.4em;
+    font-size: max(0.8125rem, 0.88cqw);
+  }
+
+  .fallback a.fallbackLink {
+    min-height: max(2.75rem, 2.6cqw);
+    margin-top: 0.2em;
+    font-size: max(0.875rem, 0.95cqw);
+  }
+}
+
+/* A small lift; transform only, so the panel never reflows. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .actions a.cta:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Headline only: eyebrow fades, the three lines rise in turn, then the
+ * underline wipes in left to right. Plays once. The conversion panel (price,
+ * Silver CTA, fallback) never waits on a reveal: it is visible as soon as it
+ * scrolls into view. Script-gated so nothing is left hidden if JavaScript
+ * fails, and motion-gated so reduced-motion readers get everything
+ * immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 680ms;
+    --reveal-stagger: 110ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .headline > .line {
+    opacity: 0;
+    translate: 0 24px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .headline > .line:nth-child(1) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .headline > .line:nth-child(2) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .headline > .line:nth-child(3) {
+    --reveal-delay: calc(var(--reveal-stagger) * 3);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease)
+      calc(var(--reveal-stagger) * 4.5);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] .line {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+}
+
+/* ------------------------------------------------------------- the close */
+
+/*
+ * Signature moment. As the panel scrolls in, it is laid onto the table like a
+ * sheet of paper: it rises the last few centimetres and straightens out of a
+ * slight tilt, while the scene behind it settles back (scroll-linked, so it
+ * follows the reader and is finished once the panel is fully in view; the
+ * panel is never transparent and never pinned). Once it is on screen, a coral
+ * hand-drawn loop circles ₹899, in the hero's brush-mark language, and the
+ * Start Silver CTA gets its one-time cue (styles/motion.css).
+ * Without scroll-driven support the panel simply rests in place; without
+ * JavaScript or with reduced motion the loop is already drawn.
+ */
+@keyframes final-land {
+  from {
+    translate: 0 var(--land-rise, 56px);
+    rotate: var(--land-tilt, -1.4deg);
+  }
+}
+
+@keyframes final-settle {
+  from {
+    scale: var(--final-settle, 1.05);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .panelFrame {
+      view-timeline: --panel block;
+    }
+
+    .panel {
+      transform-origin: 50% 100%;
+      animation: final-land linear both;
+      animation-timeline: --panel;
+      animation-range: entry 0% entry 90%;
+    }
+
+    .backdrop {
+      view-timeline: --final-scene block;
+    }
+
+    /* Centred on the window, the scene's vanishing point. */
+    .artwork {
+      transform-origin: 60% 42%;
+      animation: final-settle linear both;
+      animation-timeline: --final-scene;
+      animation-range: entry 0% cover 50%;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) and (max-width: 1199px) {
+    .section {
+      --land-rise: 28px;
+      --land-tilt: -0.5deg;
+      --final-settle: 1.03;
+    }
+  }
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --cta-cue-delay: 1000ms;
+  }
+
+  .priceCircle path {
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 900ms cubic-bezier(0.65, 0, 0.35, 1) 250ms;
+  }
+
+  .panelFrame[data-revealed="true"] .priceCircle path {
+    stroke-dashoffset: 0;
+  }
+}

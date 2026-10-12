@@ -1,9 +1,10 @@
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import { CampaignSection } from "@/components/shared/CampaignSection";
 import { CampaignButton } from "@/components/shared/CampaignButton";
 import { SectionEyebrow } from "@/components/shared/SectionEyebrow";
 import { campaignCopy, silverProposition } from "@/config/campaign";
-import { heroAssets, type HeroAsset } from "./heroAssets";
+import { HeroAmbientControl } from "./HeroAmbientControl";
+import { HERO_MOBILE_MEDIA, heroAssets, type HeroAsset } from "./heroAssets";
 import { HeroScene } from "./HeroScene";
 import styles from "./HeroSection.module.css";
 
@@ -39,13 +40,14 @@ export function HeroSection() {
       <div className={styles.content}>
         <SectionEyebrow className={styles.eyebrow}>{copy.eyebrow}</SectionEyebrow>
         <h1 id="hero-heading" className={styles.headline}>
-          {headlineLead.trim()}
-          <br />
-          <span className={styles.emphasis}>
-            {copy.headlineEmphasis}
-            <HeadlineUnderline />
+          <span className={styles.headlineLine}>{headlineLead.trim()}</span>{" "}
+          <span className={styles.headlineLine}>
+            <span className={styles.emphasis}>
+              {copy.headlineEmphasis}
+              <HeadlineUnderline />
+            </span>
+            {headlineTail}
           </span>
-          {headlineTail}
         </h1>
         <p className={styles.subheadline}>{copy.subheadline}</p>
         <p className={styles.body}>{copy.body}</p>
@@ -78,6 +80,7 @@ export function HeroSection() {
             link="silverMembership"
             trackEvent="silver_cta_click"
             trackParams={{ placement: "hero" }}
+            cue="load"
             className={styles.primaryCta}
           >
             {copy.primaryCta}
@@ -97,34 +100,94 @@ export function HeroSection() {
           </CampaignButton>
         </div>
       </div>
+
+      <HeroAmbientControl className={styles.ambientControl} iconClassName={styles.ambientIcon} />
     </CampaignSection>
   );
 }
 
 /**
- * Positioning wrapper (placement in the scene) → motion wrapper (pointer +
- * scroll transform, from CSS variables) → ambient wrapper (keyframes). Each
- * level owns one concern, so the three motion systems never overwrite.
+ * Positioning wrapper (placement in the scene, plus the one-time intro on the
+ * individual translate / scale / opacity properties) → motion wrapper
+ * (pointer + scroll transform, from CSS variables) → ambient wrapper
+ * (keyframes). Each level owns one concern, so the motion systems never
+ * overwrite.
  */
 function SceneLayer({ asset, className }: { asset: HeroAsset; className: string }) {
   return (
     <div className={`${styles.layer} ${className}`}>
       <div className={styles.motion}>
         <div className={styles.ambient}>
-          <Image
-            src={asset.src}
-            alt=""
-            width={asset.width}
-            height={asset.height}
-            unoptimized
-            draggable={false}
-            className={styles.layerImage}
-            loading="eager"
-            fetchPriority={asset.priority ? "high" : "auto"}
-          />
+          {asset.mobile ? <ArtDirectedImage asset={asset} /> : <LayerImage asset={asset} />}
         </div>
       </div>
     </div>
+  );
+}
+
+function LayerImage({ asset }: { asset: HeroAsset }) {
+  return (
+    <Image
+      src={asset.src}
+      alt=""
+      width={asset.width}
+      height={asset.height}
+      sizes={asset.sizes}
+      quality={85}
+      draggable={false}
+      className={styles.layerImage}
+      loading="eager"
+      fetchPriority={asset.priority ? "high" : "auto"}
+    />
+  );
+}
+
+/** A 1×1 transparent GIF: the browser selects it and fetches nothing. */
+const EMPTY_SOURCE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+/**
+ * Exactly one candidate is fetched: the browser evaluates the `<source>`
+ * media query before requesting anything, unlike CSS-hidden duplicates.
+ */
+function ArtDirectedImage({ asset }: { asset: HeroAsset }) {
+  const { mobile } = asset;
+  const { props } = getImageProps({
+    src: asset.src,
+    alt: "",
+    width: asset.width,
+    height: asset.height,
+    sizes: asset.sizes,
+    quality: 85,
+    loading: "eager",
+    fetchPriority: asset.priority ? "high" : "auto",
+  });
+  const crop =
+    mobile && mobile !== "hidden"
+      ? getImageProps({
+          src: mobile.src,
+          alt: "",
+          width: mobile.width,
+          height: mobile.height,
+          sizes: mobile.sizes,
+          quality: 85,
+        }).props
+      : null;
+
+  return (
+    <picture>
+      {crop ? (
+        <source
+          media={HERO_MOBILE_MEDIA}
+          srcSet={crop.srcSet}
+          sizes={crop.sizes}
+          width={crop.width}
+          height={crop.height}
+        />
+      ) : (
+        <source media={HERO_MOBILE_MEDIA} srcSet={EMPTY_SOURCE} width={1} height={1} />
+      )}
+      <img {...props} alt="" draggable={false} className={styles.layerImage} />
+    </picture>
   );
 }
 

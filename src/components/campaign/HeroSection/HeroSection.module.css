@@ -15,7 +15,8 @@
  *            stretches with the canvas (see --stage-follow).
  *
  * Motion is split across nested wrappers so systems never overwrite:
- *   .layer   placement only (left/top|bottom/width; no transform)
+ *   .layer   placement (left/top|bottom/width); the one-time intro uses only
+ *            the individual translate / scale / opacity properties
  *   .motion  pointer (--hero-px/--hero-py) + scroll (--hero-exit) transform
  *   .ambient automatic keyframes
  */
@@ -167,12 +168,17 @@
   overflow: hidden;
 }
 
-/* Dappled leaf shadows cast by the supplied right foliage, as in the reference. */
+/*
+ * Dappled leaf shadows cast by the supplied right foliage, as in the reference.
+ * The blurred silhouette needs no more than the optimizer's 640w rendition,
+ * the same URL the foliage layer requests on phones.
+ */
 .wall::before {
   content: "";
   position: absolute;
   inset: -20% -60% -10% -30%;
-  background: url("/assets/sections/hero/hero-foliage-right.webp") no-repeat 30% 20% / 120% auto;
+  background: url("/_next/image?url=%2Fassets%2Fsections%2Fhero%2Fhero-foliage-right.webp&w=640&q=85")
+    no-repeat 30% 20% / 120% auto;
   filter: brightness(0) blur(5px);
   opacity: 0.2;
   mix-blend-mode: multiply;
@@ -353,6 +359,35 @@
   );
 }
 
+/*
+ * Below 1024px some layers render pixel-exact crops (heroAssets.ts), placed
+ * over the source pixels they were cut from. Same query as HERO_MOBILE_MEDIA.
+ * The mountain's crop keeps ~100 source rows above the visible window for
+ * its scroll travel, which is capped here to fit them.
+ */
+@media (max-width: 1023px) {
+  .mountain {
+    --x: calc(22% + 280 / 2172 * 108%);
+    --y: calc(-18.4% + 400 / 2172 * 108% * 1728 / 891);
+    --w: calc(1000 / 2172 * 108%);
+    mask-image: none;
+  }
+
+  .mountain .motion {
+    --exit-y: 24px;
+  }
+
+  .windowTable {
+    --x: calc(680 / 1746 * 100%);
+    --y: calc(264 / 1746 * 100% * 1728 / 891);
+    --w: calc(1066 / 1746 * 100%);
+  }
+
+  .foliageLeft {
+    display: none;
+  }
+}
+
 /* ---------------------------------------------------------------- ambient */
 
 @keyframes hero-sway-left {
@@ -400,7 +435,8 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
+/* Script-gated: without JavaScript there is no pause control, so nothing loops. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .foliageLeft .ambient {
     animation: hero-sway-left 11s ease-in-out infinite alternate;
   }
@@ -420,6 +456,246 @@
   .atmosphere {
     animation: hero-light 15s ease-in-out infinite alternate;
   }
+}
+
+/* Set by HeroAmbientControl: paused by the visitor, or while scrolled away. */
+.hero:is([data-ambient-paused], [data-ambient-offscreen]) :is(.ambient, .atmosphere) {
+  animation-play-state: paused;
+}
+
+/* ---------------------------------------------------------------- intro */
+
+/*
+ * One-time atmospheric reveal on load, in CSS so it never waits on
+ * hydration and plays without JavaScript. It ends on the static composition.
+ *
+ *   0ms     morning haze over the whole scene lifts; the reading objects
+ *           come into focus first (~1s) ...
+ *           ... while a second haze over the room and landscape behind them
+ *           lingers, then clears (~1.6s): a rack focus from books to window
+ *   0ms     the far landscape eases back from a slight dolly (1.8s)
+ *   150ms   the foreground leaves part in from the edges
+ *   copy    eyebrow → headline lines rise → underline draws → subhead, body
+ *           → accent brush → price → benefits; the CTA is never hidden and
+ *           gets its cue (styles/motion.css) once the copy has settled
+ *
+ * LCP-safe: the window/table and mountain layers and the headline never
+ * change opacity (they only move, or are under a haze that sits above them),
+ * so they are painted, and timed, on the first frame.
+ */
+.scene::after,
+.canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scene::after {
+  background: radial-gradient(
+    ellipse 70% 90% at 62% 60%,
+    rgb(255 251 240 / 0.62),
+    rgb(251 246 238 / 0.82)
+  );
+}
+
+.canvas::after {
+  background: linear-gradient(180deg, rgb(250 246 236 / 0.9), rgb(250 240 222 / 0.7));
+}
+
+@keyframes hero-haze {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-dolly {
+  from {
+    translate: 0 var(--intro-rise, 8px);
+    scale: var(--intro-scale, 1.05);
+  }
+}
+
+@keyframes hero-leaves-left {
+  from {
+    translate: calc(var(--intro-part, 44px) * -1) -12px;
+    opacity: 0;
+  }
+}
+
+@keyframes hero-leaves-right {
+  from {
+    translate: var(--intro-part, 44px) -12px;
+    opacity: 0;
+  }
+}
+
+@keyframes hero-copy-rise {
+  from {
+    translate: 0 var(--intro-copy-rise, 14px);
+    opacity: 0;
+  }
+}
+
+@keyframes hero-line-rise {
+  from {
+    translate: 0 0.32em;
+  }
+}
+
+@keyframes hero-wipe {
+  from {
+    clip-path: inset(-30% 100% -30% 0);
+  }
+  to {
+    clip-path: inset(-30% -5% -30% 0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero {
+    --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --cta-cue-delay: 1500ms;
+  }
+
+  .scene::after {
+    animation: hero-haze 1000ms var(--intro-ease) both;
+  }
+
+  .canvas::after {
+    animation: hero-haze 1300ms var(--intro-ease) 300ms both;
+  }
+
+  .mountain {
+    animation: hero-dolly 1800ms var(--intro-ease) backwards;
+  }
+
+  .foliageLeft {
+    animation: hero-leaves-left 1300ms var(--intro-ease) 150ms backwards;
+  }
+
+  .foliageRight {
+    animation: hero-leaves-right 1300ms var(--intro-ease) 150ms backwards;
+  }
+
+  .eyebrow,
+  .subheadline,
+  .body,
+  .accentText,
+  .price,
+  .benefit {
+    animation: hero-copy-rise 800ms var(--intro-ease) var(--intro-delay, 0ms) backwards;
+  }
+
+  .headlineLine {
+    animation: hero-line-rise 900ms var(--intro-ease) var(--intro-delay, 0ms) backwards;
+  }
+
+  .headlineLine:nth-child(1) {
+    --intro-delay: 80ms;
+  }
+
+  .headlineLine:nth-child(2) {
+    --intro-delay: 170ms;
+  }
+
+  .underline,
+  .brush {
+    animation: hero-wipe 700ms var(--intro-ease) var(--intro-delay) backwards;
+  }
+
+  .underline {
+    --intro-delay: 520ms;
+  }
+
+  .subheadline {
+    --intro-delay: 300ms;
+  }
+
+  .body {
+    --intro-delay: 380ms;
+  }
+
+  .brush {
+    --intro-delay: 560ms;
+  }
+
+  .accentText {
+    --intro-delay: 640ms;
+  }
+
+  .price {
+    --intro-delay: 700ms;
+  }
+
+  .benefit {
+    --intro-delay: calc(820ms + var(--benefit-index, 0) * 70ms);
+  }
+
+  .benefit:nth-child(2) {
+    --benefit-index: 1;
+  }
+
+  .benefit:nth-child(3) {
+    --benefit-index: 2;
+  }
+
+  .benefit:nth-child(4) {
+    --benefit-index: 3;
+  }
+}
+
+/* Phones: shorter travel, no dolly; the mountain stays inside its crop margin. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 1023px) {
+  .hero {
+    --intro-rise: 6px;
+    --intro-scale: 1.02;
+    --intro-part: 20px;
+    --intro-copy-rise: 10px;
+    --cta-cue-delay: 1300ms;
+  }
+}
+
+/* Bottom-right of the scene on every layout, above the artwork. */
+.ambientControl {
+  position: absolute;
+  right: var(--container-gutter);
+  bottom: var(--space-4);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid rgb(18 32 58 / 0.18);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-paper) 88%, transparent);
+  box-shadow: 0 6px 16px -10px rgb(18 32 58 / 0.6);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.ambientControl:hover {
+  background: var(--color-paper);
+  color: var(--color-brand-strong);
+}
+
+.ambientControl:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+.ambientIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---------------------------------------------------------------- content */
@@ -456,6 +732,10 @@
   line-height: 1.09;
   letter-spacing: -0.014em;
   text-wrap: initial;
+}
+
+.headlineLine {
+  display: block;
 }
 
 .emphasis {
@@ -649,11 +929,12 @@
   text-align: center;
 }
 
+/* brand-strong: the scene shows faintly through the paper here, which takes --color-brand under 4.5:1. */
 .actions a.giftCta {
   min-height: 2.75rem;
   gap: 0.5em;
   margin-top: 0.35em;
-  color: var(--color-brand);
+  color: var(--color-brand-strong);
   font-size: clamp(0.9rem, calc(var(--u) * 0.95), 1.15rem);
   font-weight: 600;
   text-decoration: none;
@@ -666,7 +947,7 @@
 }
 
 .actions a.giftCta:hover {
-  color: var(--color-brand-strong);
+  color: var(--color-ink);
 }
 
 .giftIcon {
@@ -692,15 +973,19 @@
  *                      environment would zoom past ~21% (1728:891 ÷ 1.6), so
  *                      the hero stops growing instead.
  * Wider than 1728:891, the canvas is width-bound and crops sky from the top.
+ *
+ * --hero-height is a minimum, not a fixed height: if the copy needs more room
+ * (user text-spacing or font overrides), the hero grows instead of clipping
+ * the CTA. The copy therefore scales from --hero-height, not from cqh.
  */
 @media (min-width: 1024px) {
   .hero {
     --canvas-width: 100%;
     --hero-min-height: 36rem;
     --hero-max-ratio: 1.6;
-    container-type: size;
-    display: block;
-    height: clamp(var(--hero-min-height), 100svh, 100vw / var(--hero-max-ratio));
+    --hero-height: clamp(var(--hero-min-height), 100svh, 100vw / var(--hero-max-ratio));
+    display: grid;
+    min-height: var(--hero-height);
   }
 
   .scene {
@@ -753,16 +1038,19 @@
    * of floating in it.
    */
   .content {
-    --u: min(1cqw, 1.9394cqh);
-    --slack: max(0px, 100cqh - 51.5625cqw);
+    --u: min(1cqw, var(--hero-height) * 0.019394);
+    --slack: max(0px, var(--hero-height) - 51.5625cqw);
     --group-gap: min(var(--slack) * 0.07, var(--u) * 1.2);
-    height: 100%;
     justify-content: safe center;
     padding: max(calc(var(--header-height) + var(--space-3)), calc(var(--u) * 7)) 0 calc(var(--u) * 3.2) 8.4cqw;
   }
 
+  /* On small laptops the line's end reaches the window frame; the halo keeps it legible there. */
   .subheadline {
     margin-top: calc(0.5em + var(--group-gap));
+    text-shadow:
+      0 0 0.35em var(--paper),
+      0 0 0.9em color-mix(in srgb, var(--paper) 75%, transparent);
   }
 
   .accent {
@@ -781,6 +1069,14 @@
     width: calc(var(--u) * 27.4);
     min-width: 20rem;
     margin-top: calc(var(--u) * 0.9 + var(--group-gap));
+  }
+}
+
+/* Clears the next section's torn edge, which overlaps the hero's last ~5.4cqw. */
+@media (min-width: 1024px) {
+  .ambientControl {
+    right: 3cqw;
+    bottom: calc(5.4cqw + var(--space-3));
   }
 }
 

@@ -1,0 +1,626 @@
+/*
+ * Gift a subscription: one static artwork with semantic copy, a single gift
+ * CTA and four HTML/SVG benefit bubbles over it.
+ *
+ * The artwork (1746 × 901) carries a parchment wall, the window, the gift-
+ * wrapped books with their printed tag, the mug and a torn edge at both ends.
+ * The previous section's own baked bottom tear is the single edge between
+ * the two sections, so this artwork's baked top tear is lifted away and the
+ * scene cross-fades up out of that section's teal band, the same hand-off
+ * sections 5 and 6 make. Section 6 is omitted in production until approved
+ * testimonials exist; section 5 ends in the same baked tear, so the hand-off
+ * holds either way.
+ */
+
+/* Clips sideways only, so the backdrop can blend up into the section above. */
+.section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  background: #fcf1dc;
+  color: var(--color-ink);
+}
+
+/*
+ * Clipping frame. The artwork inside overscans it so pointer drift
+ * (--drift-x/-y at full deflection, from --gf-px/--gf-py) plus scroll travel
+ * (±--scroll-travel, from --scroll-progress) never exposes an edge.
+ *
+ * Below desktop the scene is a full-strength band between the copy and the
+ * benefits, never behind text, cropped to the mug, the wrapped books, the
+ * bow and the whole printed tag (source x 490–1350, y 330–770), clear of
+ * both baked tears; the fades soften its top and bottom into the cream.
+ */
+.backdrop {
+  --overscan: 16px;
+  --drift-x: 5px;
+  --drift-y: 4px;
+  --scroll-travel: 6px;
+  position: relative;
+  order: 2;
+  aspect-ratio: 860 / 440;
+  overflow: clip;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 10%, #000 90%, transparent 100%);
+}
+
+.artwork {
+  position: absolute;
+  top: calc(-330 / 440 * 100%);
+  left: calc(-490 / 860 * 100%);
+  width: calc(1746 / 860 * 100%);
+  aspect-ratio: 1746 / 901;
+  background: url("/assets/sections/gift/gift-background.webp") no-repeat 0 0 / 100% 100%;
+  /* The wrapped books (source ~1090, 560): the settle below is centred on them. */
+  transform-origin: 62.4% 62%;
+  transform: translate3d(
+    calc(var(--gf-px, 0) * var(--drift-x)),
+    calc(
+      var(--gf-py, 0) * var(--drift-y) + (0.5 - var(--scroll-progress, 0.5)) * 2 *
+        var(--scroll-travel)
+    ),
+    0
+  );
+}
+
+/* ------------------------------------------------------------ mobile flow */
+
+/* The copy and the benefits join the section's flow on either side of the band. */
+.content {
+  display: contents;
+}
+
+.intro {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-5);
+}
+
+.benefitsFrame {
+  order: 3;
+  padding: var(--space-5) var(--container-gutter) var(--space-9);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-ink);
+  font-size: clamp(0.72rem, 0.95cqw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.eyebrowMark {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headline {
+  margin-top: 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 3.6cqw, 4.6rem);
+  font-weight: 800;
+  font-variation-settings: "opsz" 72;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: initial;
+}
+
+.line {
+  display: block;
+}
+
+.emphasis {
+  position: relative;
+  width: fit-content;
+  color: var(--color-brand-strong);
+}
+
+.underline {
+  position: absolute;
+  left: -0.02em;
+  top: 100%;
+  width: 92%;
+  height: 0.2em;
+  margin-top: -0.04em;
+  fill: var(--color-accent);
+  overflow: visible;
+}
+
+.body {
+  max-width: 22em;
+  margin-top: 1em;
+  font-size: clamp(1.0625rem, 1.35cqw, 1.55rem);
+  line-height: 1.45;
+}
+
+.actions {
+  margin-top: var(--space-5);
+}
+
+/*
+ * The campaign's coral, deepened just enough for white label text to clear
+ * WCAG AA at body size (~4.6:1); the raw accent token is too light for it.
+ */
+.actions a.cta {
+  --cta-coral: #cc4636;
+  min-height: 3.25rem;
+  padding: 0 1.35em;
+  gap: 0.6em;
+  border-radius: 0.5rem;
+  background: var(--cta-coral);
+  color: var(--color-surface);
+  box-shadow: 0 10px 22px -14px rgb(160 50 32 / 0.85);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.actions a.cta:hover {
+  background: color-mix(in srgb, var(--cta-coral) 85%, var(--color-ink));
+  box-shadow: 0 14px 26px -14px rgb(160 50 32 / 0.9);
+}
+
+.actions a.cta:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+.arrow {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate var(--duration-base) var(--ease-out);
+}
+
+.actions a.cta:hover .arrow {
+  translate: 0.18em 0;
+}
+
+/* Two by two on phones, one row from tablet up. */
+.benefits {
+  --bubble: 4.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefit {
+  --tint: #fbeed5;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.benefit[data-tint="mint"] {
+  --tint: #d3eee2;
+}
+
+.benefit[data-tint="coral"] {
+  --tint: #fcd8d1;
+}
+
+.benefit[data-tint="blue"] {
+  --tint: #d6e6f6;
+}
+
+.benefit[data-tint="cream"] {
+  --tint: #fbecd0;
+}
+
+.bubble {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bubble);
+  height: var(--bubble);
+  border: 1px solid rgb(255 255 255 / 0.75);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.55), transparent 62%),
+    var(--tint);
+  box-shadow: 0 10px 18px -12px rgb(18 32 58 / 0.45);
+}
+
+.glyph {
+  width: 50%;
+  height: 50%;
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+
+.ticks {
+  position: absolute;
+  top: -2%;
+  left: -26%;
+  width: 30%;
+  height: 30%;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.label {
+  margin-top: 0.7em;
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.32;
+  text-wrap: initial;
+}
+
+.labelLine {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .benefits {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .benefit {
+    padding: 0 var(--space-3);
+  }
+
+  /* Hairline separators between columns, fading out at both ends. */
+  .benefit + .benefit::before {
+    content: "";
+    position: absolute;
+    top: 8%;
+    bottom: 4%;
+    left: 0;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgb(18 32 58 / 0.22) 22%,
+      rgb(18 32 58 / 0.22) 78%,
+      transparent
+    );
+  }
+}
+
+/* ---------------------------------------------------------------- desktop */
+
+/*
+ * Desktop places everything in cqw from the section's top-left, registered
+ * to the artwork (1746 × 901), from 1200px like sections 5 and 6. Landmarks,
+ * in source rows:
+ *   top tear              y 0–~110, lifted out of the section
+ *   parchment wall        x 0–640,  y 60–700
+ *   window, sky           x 650–1660, y 90–560
+ *   ribbon bow            x 860–1290, y ~385–470
+ *   gift tag (printed)    x 1140–1325, y 480–725
+ *   mug (printed)         x 520–725,  y 550–720
+ *   bottom tear           y ~785–901, left visible for the next section
+ * Benefits sit in the sky band above the bow, as in the approved creative.
+ */
+@media (min-width: 1200px) {
+  /*
+   * --art-lift: source rows above the section edge. The baked top tear ends
+   *   by row ~110, and the blend zone keeps the rows down to ~150 faint.
+   * --blend: how far the scene reaches up over the previous section's
+   *   bottom, fading in so it is fully opaque at the seam.
+   */
+  .section {
+    --art-lift: calc(150 / 1746 * 100cqw);
+    --blend: 3.4cqw;
+    display: block;
+    aspect-ratio: 1746 / 751;
+    background: none;
+  }
+
+  /* Same eased fade as section 6, on the static frame so drift never moves the seam. */
+  .backdrop {
+    position: absolute;
+    inset: calc(var(--blend) * -1) 0 0;
+    aspect-ratio: auto;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgb(0 0 0 / 0.05) calc(var(--blend) * 0.3),
+      rgb(0 0 0 / 0.15) calc(var(--blend) * 0.48),
+      rgb(0 0 0 / 0.38) calc(var(--blend) * 0.64),
+      rgb(0 0 0 / 0.68) calc(var(--blend) * 0.8),
+      rgb(0 0 0 / 0.9) calc(var(--blend) * 0.92),
+      #000 var(--blend)
+    );
+  }
+
+  /*
+   * Twice the overscan sideways makes the image tall enough to overscan the
+   * bottom edge too, since its height follows its width.
+   */
+  .artwork {
+    inset: calc(var(--blend) - var(--art-lift) - var(--overscan)) calc(var(--overscan) * -2) auto;
+    width: auto;
+  }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  /*
+   * Protected text column on the parchment wall, clear of the mug. The last
+   * headline line (~11.4em) is the widest; at this size it ends near 36cqw,
+   * short of the window frame (~36.5cqw).
+   */
+  .intro {
+    position: absolute;
+    top: 2.8cqw;
+    left: 6.2cqw;
+    width: 30cqw;
+    padding: 0;
+  }
+
+  .eyebrow {
+    font-size: max(0.72rem, 0.86cqw);
+  }
+
+  .headline {
+    margin-top: 0.6em;
+    font-size: 2.65cqw;
+    line-height: 1.08;
+    white-space: nowrap;
+  }
+
+  .body {
+    max-width: 21em;
+    margin-top: 1em;
+    font-size: 1.3cqw;
+    line-height: 1.4;
+  }
+
+  .actions {
+    margin-top: 1.7cqw;
+  }
+
+  .actions a.cta {
+    min-height: 3.4cqw;
+    padding: 0 1.5cqw;
+    border-radius: 0.45cqw;
+    font-size: max(1rem, 1.2cqw);
+  }
+
+  .benefitsFrame {
+    position: absolute;
+    top: 3.5cqw;
+    left: 43.6cqw;
+    width: 49.2cqw;
+    padding: 0;
+  }
+
+  .benefits {
+    --bubble: 5.6cqw;
+  }
+
+  .benefit {
+    padding: 0 0.6cqw;
+  }
+
+  .label {
+    margin-top: 0.75cqw;
+    font-size: max(0.8125rem, 1.02cqw);
+    line-height: 1.3;
+    text-shadow:
+      0 0 0.25em rgb(255 251 243),
+      0 0 0.5em rgb(255 251 243 / 0.95),
+      0 0 1.2em rgb(255 251 243 / 0.8);
+  }
+}
+
+/* ------------------------------------------------------------------ hover */
+
+/*
+ * Transform only on the bubble, so hover never moves layout or fights the
+ * entrance (which uses translate / opacity on the list item). The overshoot
+ * in the easing gives the small paper bounce, on lift and on return.
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bubble {
+    transition:
+      transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 420ms var(--ease-out);
+  }
+
+  .benefit:hover .bubble {
+    transform: translate3d(0, -6px, 0) scale(1.04);
+    box-shadow: 0 16px 22px -12px rgb(18 32 58 / 0.42);
+  }
+}
+
+/* ---------------------------------------------------------------- entrance */
+
+/*
+ * Intro: eyebrow fades, the three headline lines rise in turn, the underline
+ * wipes in left to right, then the paragraph. The Gift Silver CTA is never
+ * held back: it is on screen with the section and gets a one-time cue
+ * (styles/motion.css) once the copy around it has settled. Benefits unwrap
+ * left to right, 120ms apart, once the row itself is in view, held back a
+ * beat so they follow the intro when both arrive together. Each plays once.
+ * Script-gated so nothing is left hidden if JavaScript fails, and
+ * motion-gated so reduced-motion readers get everything immediately.
+ */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .section {
+    --reveal-duration: 720ms;
+    --benefit-duration: 680ms;
+    --reveal-stagger: 120ms;
+    --benefit-stagger: 120ms;
+    --benefit-hold: 520ms;
+    --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --unwrap-ease: cubic-bezier(0.34, 1.5, 0.64, 1);
+    --cta-cue-delay: 900ms;
+  }
+
+  .intro > .eyebrow {
+    opacity: 0;
+    transition: opacity var(--reveal-duration) var(--reveal-ease);
+  }
+
+  .headline > .line,
+  .intro > .body {
+    opacity: 0;
+    translate: 0 24px;
+    transition:
+      opacity var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms),
+      translate var(--reveal-duration) var(--reveal-ease) var(--reveal-delay, 0ms);
+  }
+
+  .headline > .line:nth-child(1) {
+    --reveal-delay: var(--reveal-stagger);
+  }
+
+  .headline > .line:nth-child(2) {
+    --reveal-delay: calc(var(--reveal-stagger) * 2);
+  }
+
+  .headline > .line:nth-child(3) {
+    --reveal-delay: calc(var(--reveal-stagger) * 3);
+  }
+
+  .intro > .body {
+    --reveal-delay: calc(var(--reveal-stagger) * 5);
+  }
+
+  .underline {
+    clip-path: inset(-20% 100% -20% 0);
+    transition: clip-path var(--reveal-duration) var(--reveal-ease)
+      calc(var(--reveal-stagger) * 4.5);
+  }
+
+  .benefit {
+    --benefit-delay: calc(var(--benefit-hold) + var(--benefit) * var(--benefit-stagger));
+    opacity: 0;
+    translate: 0 20px;
+    transition:
+      opacity var(--benefit-duration) var(--reveal-ease) var(--benefit-delay),
+      translate var(--benefit-duration) var(--reveal-ease) var(--benefit-delay);
+  }
+
+  /* Each disc turns up out of a small tilt, like a tag being turned over. */
+  .bubble {
+    rotate: -10deg;
+    scale: 0.84;
+    transition:
+      rotate 760ms var(--unwrap-ease) var(--benefit-delay),
+      scale 760ms var(--unwrap-ease) var(--benefit-delay),
+      transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 420ms var(--ease-out);
+  }
+
+  .intro[data-revealed="true"] > .eyebrow,
+  .intro[data-revealed="true"] .line,
+  .intro[data-revealed="true"] > .body,
+  .benefitsFrame[data-revealed="true"] .benefit {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .benefitsFrame[data-revealed="true"] .bubble {
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  .intro[data-revealed="true"] .underline {
+    clip-path: inset(-20% -8% -20% 0);
+  }
+}
+
+/* ------------------------------------------------------------- gift reveal */
+
+/*
+ * Signature moment, scroll-linked to the scene's pass through the viewport
+ * (--gift): as the scene arrives, it settles back a few
+ * percent around the wrapped books, and a warm lamp light blooms over them,
+ * peaks as they reach the middle of the screen, then relaxes to a soft
+ * glow. The artwork is one flattened image, so it only ever moves as a
+ * whole; the light is a separate overlay. No-ops without scroll-driven
+ * animation support or with reduced motion: the approved static scene.
+ */
+.artwork::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 14% 22% at 62% 52%, rgb(255 226 170 / 0.75), transparent 70%),
+    radial-gradient(ellipse 26% 36% at 62% 58%, rgb(255 196 120 / 0.38), transparent 72%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes gift-settle {
+  from {
+    scale: var(--gift-settle, 1.06);
+  }
+}
+
+@keyframes gift-glow {
+  0% {
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .backdrop {
+      view-timeline: --gift block;
+    }
+
+    .artwork {
+      animation: gift-settle linear both;
+      animation-timeline: --gift;
+      animation-range: entry 0% cover 45%;
+    }
+
+    .artwork::after {
+      animation: gift-glow linear both;
+      animation-timeline: --gift;
+      animation-range: cover 15% cover 75%;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) and (max-width: 1199px) {
+    .section {
+      --gift-settle: 1.03;
+    }
+  }
+}
