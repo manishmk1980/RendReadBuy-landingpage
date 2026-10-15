@@ -1,15 +1,10 @@
+import "./dataLayer";
 import type { CampaignEvent, CampaignEventParams } from "./events";
 
-declare global {
-  interface Window {
-    dataLayer?: Record<string, unknown>[];
-  }
-}
-
 /**
- * Single dispatch point for campaign analytics. Events are queued in
- * `window.dataLayer`; GTM (see `TagManager`) consumes the queue once a
- * container is configured, including events pushed before it loaded.
+ * Single dispatch point for campaign analytics. Each call appends one
+ * dataLayer entry. Granting or withdrawing consent does not push that entry
+ * again, so an earlier campaign event is not replayed when the choice changes.
  */
 export function track(event: CampaignEvent, params: CampaignEventParams = {}) {
   if (typeof window === "undefined") return;
