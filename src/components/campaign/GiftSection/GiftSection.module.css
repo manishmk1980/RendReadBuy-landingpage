@@ -80,9 +80,15 @@
   padding: clamp(var(--space-8), 14cqw, var(--space-10)) var(--container-gutter) var(--space-5);
 }
 
+/*
+ * Top padding, plus the photograph's bottom fade, keeps the discs clear of
+ * the still life. The bottom pad used to be a full 6rem; the next section
+ * already opens with its own padding, so that left an empty band under the
+ * labels. Phones use 2rem; tablets in the stacked layout use 3rem.
+ */
 .benefitsFrame {
   order: 3;
-  padding: var(--space-5) var(--container-gutter) var(--space-9);
+  padding: var(--space-5) var(--container-gutter) var(--space-6);
 }
 
 .eyebrow {
@@ -147,6 +153,21 @@
 
 .actions {
   margin-top: var(--space-5);
+}
+
+/*
+ * Narrow phones: the button spans the content column, the same way the
+ * hero's primary action does. Wider than the sm breakpoint the label no
+ * longer fills that column, so the button stays sized to its wording.
+ */
+@media (max-width: 479px) {
+  .actions {
+    align-self: stretch;
+  }
+
+  .actions a.cta {
+    width: 100%;
+  }
 }
 
 /*
@@ -282,6 +303,10 @@
 }
 
 @media (min-width: 768px) {
+  .benefitsFrame {
+    padding-bottom: var(--space-7);
+  }
+
   .benefits {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;

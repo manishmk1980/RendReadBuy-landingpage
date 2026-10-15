@@ -1,8 +1,11 @@
 /*
- * Floats over the hero scene while the page is at rest, then settles into a
- * soft paper bar as soon as the visitor scrolls. The bar itself ignores the
- * pointer so the hero's parallax keeps tracking beneath it; only the logo and
- * sign-in prompt are interactive.
+ * Floats over the hero while the page is at rest, then settles into a paper
+ * bar once content scrolls behind it. At 1024px and up that settle is a
+ * scroll-driven animation. Below 1024px the animation is not used: support
+ * and the actual scrollport differ, and a stuck timeline leaves the bar
+ * transparent. A data-scrolled attribute paints an opaque paper bar instead.
+ * The bar ignores the pointer so the hero's parallax keeps tracking beneath
+ * it; only the logo and sign-in prompt are interactive.
  */
 .header {
   position: fixed;
@@ -38,16 +41,53 @@
 }
 
 @supports (animation-timeline: scroll()) {
-  .header {
-    animation: header-settle linear both;
-    animation-timeline: scroll(root block);
-    animation-range: 0px 120px;
+  @media (min-width: 1024px) {
+    .header {
+      animation: header-settle linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0px 120px;
+    }
   }
 }
 
 @supports not (animation-timeline: scroll()) {
+  @media (min-width: 1024px) {
+    .header {
+      background-color: color-mix(in srgb, var(--color-paper) 95%, transparent);
+    }
+  }
+}
+
+/*
+ * Phones and tablets. Resting state stays transparent over the paper hero.
+ * Once the page has scrolled, a solid paper bar keeps the logo and sign-in
+ * readable over every section. The shadow only appears with that bar, so the
+ * resting header does not gain an edge. Without scripting the bar stays up:
+ * there is no scroll state to restore the transparent rest.
+ */
+@media (max-width: 1023px) {
   .header {
-    background-color: color-mix(in srgb, var(--color-paper) 95%, transparent);
+    background-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .header {
+      transition:
+        background-color var(--duration-base) var(--ease-standard),
+        box-shadow var(--duration-base) var(--ease-standard);
+    }
+  }
+
+  .header[data-scrolled] {
+    background-color: var(--color-paper);
+    box-shadow: 0 1px 0 rgb(18 32 58 / 0.07), 0 10px 28px -18px rgb(18 32 58 / 0.3);
+  }
+}
+
+@media (max-width: 1023px) and (scripting: none) {
+  .header {
+    background-color: var(--color-paper);
+    box-shadow: 0 1px 0 rgb(18 32 58 / 0.07), 0 10px 28px -18px rgb(18 32 58 / 0.3);
   }
 }
 

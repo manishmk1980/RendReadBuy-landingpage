@@ -1095,3 +1095,184 @@
     --x: -28.5%;
   }
 }
+
+/* ---------------------------------------------------------------- mobile */
+
+/*
+ * Below 1024px the copy and the scene share one column. Display:contents
+ * lets the scene sit in that column without moving it in the DOM, so the
+ * screen-reader order stays eyebrow → headline → description → price →
+ * benefits → CTA → reassurance → gift.
+ *
+ * Sighted order pulls the price, primary CTA and reassurance up under the
+ * headline, then the existing book scene, then the longer description.
+ * The scene's canvas crop is unchanged: a taller or shifted frame would
+ * fall outside the mobile image crops.
+ */
+@media (max-width: 1023px) {
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .content,
+  .actions {
+    display: contents;
+  }
+
+  .eyebrow {
+    grid-row: 1;
+    margin-top: calc(var(--header-height) + var(--space-4));
+  }
+
+  .headline {
+    grid-row: 2;
+  }
+
+  .subheadline {
+    grid-row: 3;
+    margin-top: 0.35em;
+  }
+
+  .price {
+    grid-row: 4;
+    margin-top: var(--space-4);
+    font-size: 1rem;
+    gap: 0.45rem;
+  }
+
+  .amount {
+    font-size: clamp(2.35rem, 1.85rem + 2.4vw, 2.5rem);
+  }
+
+  .actions a.primaryCta {
+    grid-row: 5;
+    width: min(26rem, calc(100% - 2 * var(--container-gutter)));
+    margin-top: var(--space-3);
+    margin-left: var(--container-gutter);
+    justify-self: start;
+  }
+
+  .reassurance {
+    grid-row: 6;
+    margin-top: var(--space-3);
+    margin-bottom: 0;
+  }
+
+  .actions a.giftCta {
+    grid-row: 7;
+    justify-self: start;
+    width: auto;
+    margin-top: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .scene {
+    grid-row: 8;
+    grid-column: 1;
+    order: 0;
+    aspect-ratio: 1.85;
+    max-height: 26rem;
+    width: 100%;
+    anchor-name: --hero-mobile-scene;
+  }
+
+  /*
+   * The control stays a sibling of the scene (the scene is aria-hidden).
+   * Anchor insets pin it to that scene's bottom-right; the hero remains the
+   * containing block, so desktop absolute offsets are untouched.
+   */
+  .ambientControl {
+    grid-row: 8;
+    grid-column: 1;
+    position-anchor: --hero-mobile-scene;
+    top: auto;
+    left: auto;
+    right: calc(anchor(right) + var(--container-gutter));
+    bottom: calc(anchor(bottom) + var(--space-3));
+  }
+
+  .body {
+    grid-row: 9;
+    margin-top: var(--space-5);
+  }
+
+  .accent {
+    grid-row: 10;
+    justify-self: start;
+    width: max-content;
+    max-width: calc(100% - 2 * var(--container-gutter));
+    margin-top: var(--space-3);
+  }
+
+  .benefits {
+    grid-row: 11;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-3);
+    width: auto;
+    margin-top: var(--space-5);
+    margin-bottom: clamp(4.5rem, 16vw, 6.5rem);
+  }
+
+  .benefit {
+    min-width: 0;
+    padding-inline: 0.15rem;
+  }
+
+  .benefitLabel {
+    max-width: 12em;
+  }
+
+  .eyebrow,
+  .headline,
+  .subheadline,
+  .price,
+  .reassurance,
+  .body,
+  .accent,
+  .benefits,
+  .giftCta {
+    margin-inline: var(--container-gutter);
+  }
+
+  .paperBlend {
+    background: linear-gradient(
+      180deg,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 78%, transparent) 7%,
+      transparent 20%,
+      transparent 82%,
+      var(--paper) 100%
+    );
+  }
+}
+
+/* Tablet: keep the two benefit columns from stretching across the width. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .benefits {
+    width: min(36rem, calc(100% - 2 * var(--container-gutter)));
+    justify-self: center;
+    margin-inline: auto;
+  }
+}
+
+/*
+ * Narrow phones where the fixed header wraps onto two lines. The token
+ * header height is one line, so the eyebrow needs a deeper offset there.
+ */
+@media (max-width: 363px) {
+  .eyebrow {
+    margin-top: calc(var(--header-height) + 2.75rem);
+  }
+}
+
+/* "reading going." stays on one line once the display size steps down. */
+@media (max-width: 349px) {
+  .headline {
+    font-size: 2.3rem;
+  }
+
+  .amount {
+    font-size: 2.15rem;
+  }
+}

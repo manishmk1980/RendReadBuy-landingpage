@@ -294,6 +294,36 @@
   translate: 0.18em 0;
 }
 
+/*
+ * Phones. Three stacked cards do not need the 6rem tail or the 3rem break
+ * that the wider flow uses, and the Silver label needs a little more of the
+ * button's width so it does not sit flush on two lines. The 768px row and
+ * the 1200px composition keep the rules outside this block.
+ */
+@media (max-width: 767px) {
+  .content {
+    gap: clamp(1.75rem, 6cqw, 2.5rem);
+    padding-bottom: clamp(3rem, 12cqw, 4rem);
+  }
+
+  .cards {
+    gap: 1.125rem;
+  }
+
+  .card {
+    --card-pad: 1.125rem 1rem 1rem;
+  }
+
+  .cardBody {
+    margin-bottom: 1rem;
+  }
+
+  .card a.cta {
+    padding-inline: 0.75rem;
+    line-height: 1.25;
+  }
+}
+
 @media (min-width: 768px) {
   .cards {
     grid-template-columns: 1fr 1fr 1.08fr;
