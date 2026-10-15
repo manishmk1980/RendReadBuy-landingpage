@@ -2,6 +2,7 @@ import Image from "next/image";
 import { brand } from "@/config/brand";
 import { campaignCopy } from "@/config/campaign";
 import { links, socialProfiles } from "@/config/links";
+import { CookieSettingsButton } from "@/components/campaign/Consent";
 import { trackingAttributes } from "@/lib/analytics";
 import { SocialIcon } from "./SocialIcon";
 import styles from "./CampaignFooter.module.css";
@@ -81,6 +82,9 @@ export function CampaignFooter() {
               ))}
             </ul>
           </nav>
+          <CookieSettingsButton className={`${styles.link} ${styles.cookieSettings}`}>
+            {copy.cookieSettings}
+          </CookieSettingsButton>
           <p className={styles.copyright}>
             © {copy.copyrightYear} {copy.copyrightHolder}
           </p>

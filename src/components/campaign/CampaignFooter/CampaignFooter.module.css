@@ -105,8 +105,22 @@
 
 .logoLink:focus-visible,
 .link:focus-visible,
-.socialLink:focus-visible {
+.socialLink:focus-visible,
+.cookieSettings:focus-visible {
   outline-color: var(--color-ink);
+}
+
+/*
+ * Own row, so the existing legal links and their separators stay as they are.
+ * The control is a button: it reopens preferences on this page.
+ */
+.cookieSettings {
+  flex-basis: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
 }
 
 .copyright {
@@ -143,9 +157,26 @@
   }
 
   .meta {
+    display: grid;
     grid-area: meta;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "links copyright"
+      "cookies cookies";
+    align-items: center;
+    justify-content: end;
     justify-self: end;
-    flex-wrap: nowrap;
+  }
+
+  .meta nav {
+    grid-area: links;
+  }
+
+  .cookieSettings {
+    grid-area: cookies;
+    flex-basis: auto;
+    justify-self: end;
+    text-align: end;
   }
 
   /* One row: hairline separators between links, and a wider gap before the copyright. */
@@ -168,6 +199,7 @@
   }
 
   .copyright {
+    grid-area: copyright;
     width: auto;
   }
 }
