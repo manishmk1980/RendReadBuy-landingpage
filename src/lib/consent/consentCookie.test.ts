@@ -4,6 +4,7 @@ import {
   CONSENT_COOKIE_VERSION,
   CONSENT_RETENTION,
   DENIED_PREFERENCES,
+  PRESELECTED_EDITOR_PREFERENCES,
   parseConsentValue,
   preferencesForEditor,
   readConsentFromCookieString,
@@ -104,11 +105,25 @@ describe("consent cookie", () => {
     expect(readStoredConsent(NOW)).toEqual(saved);
   });
 
-  it("uses denied defaults only when the saved cookie is missing, expired, or unreadable", () => {
-    expect(preferencesForEditor(null)).toEqual(DENIED_PREFERENCES);
+  it("preselects the editor when no valid choice is saved and keeps saved choices exact", () => {
+    expect(DENIED_PREFERENCES).toEqual({ analytics: "denied", advertising: "denied" });
+    expect(PRESELECTED_EDITOR_PREFERENCES).toEqual({ analytics: "granted", advertising: "granted" });
 
-    const saved = stored({ analytics: "denied", advertising: "granted" });
-    expect(preferencesForEditor(saved)).toEqual({ analytics: "denied", advertising: "granted" });
+    const suggested = preferencesForEditor(null);
+    expect(suggested).toEqual(PRESELECTED_EDITOR_PREFERENCES);
+    expect(suggested).not.toBe(PRESELECTED_EDITOR_PREFERENCES);
+    suggested.analytics = "denied";
+    expect(preferencesForEditor(null)).toEqual(PRESELECTED_EDITOR_PREFERENCES);
+
+    expect(preferencesForEditor(stored({ analytics: "denied", advertising: "granted" }))).toEqual({
+      analytics: "denied",
+      advertising: "granted",
+    });
+    expect(preferencesForEditor(stored({ analytics: "denied", advertising: "denied" }))).toEqual(DENIED_PREFERENCES);
+    expect(preferencesForEditor(stored({ analytics: "granted", advertising: "granted" }))).toEqual({
+      analytics: "granted",
+      advertising: "granted",
+    });
 
     const header = [
       "_ga=GA1.1.111",
@@ -125,8 +140,11 @@ describe("consent cookie", () => {
     expect(parseConsentValue("%E0%A4%A", NOW)).toBeNull();
 
     const expiredAt = NOW - (CONSENT_RETENTION.maxAgeSeconds * 1000 + 1);
-    expect(parseConsentValue(`v1.analytics.granted.advertising.granted.t.${expiredAt}`, NOW)).toBeNull();
-    expect(preferencesForEditor(parseConsentValue("not-a-choice", NOW))).toEqual(DENIED_PREFERENCES);
+    const expiredValue = `v1.analytics.granted.advertising.granted.t.${expiredAt}`;
+    expect(parseConsentValue(expiredValue, NOW)).toBeNull();
+    expect(preferencesForEditor(parseConsentValue("not-a-choice", NOW))).toEqual(PRESELECTED_EDITOR_PREFERENCES);
+    expect(preferencesForEditor(parseConsentValue(expiredValue, NOW))).toEqual(PRESELECTED_EDITOR_PREFERENCES);
+    expect(preferencesForEditor(parseConsentValue("not-a-choice", NOW))).not.toEqual(DENIED_PREFERENCES);
 
     const jar = installCookieJar();
     jar.set(CONSENT_COOKIE_NAME, "not-a-choice");

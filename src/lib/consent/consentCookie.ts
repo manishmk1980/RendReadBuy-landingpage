@@ -44,9 +44,20 @@ export type StoredConsent = ConsentPreferences & {
   chosenAt: number;
 };
 
+/** Tracking state when no valid choice is stored. Not the editor's first-open appearance. */
 export const DENIED_PREFERENCES: ConsentPreferences = {
   analytics: "denied",
   advertising: "denied",
+};
+
+/**
+ * Checked appearance in Manage Preferences when no valid choice is saved.
+ * Opening the dialog with these values does not write a cookie and does not
+ * grant analytics or advertising.
+ */
+export const PRESELECTED_EDITOR_PREFERENCES: ConsentPreferences = {
+  analytics: "granted",
+  advertising: "granted",
 };
 
 const CONSENT_VALUE =
@@ -66,10 +77,11 @@ function isWithinRetention(chosenAt: number, now: number): boolean {
 
 /**
  * Preferences to show in Cookie settings or Manage Preferences.
- * Denied is the default only when there is no valid saved choice.
+ * No valid choice shows both categories checked. That appearance is not
+ * stored. A saved choice, including a denied category, is shown exactly.
  */
 export function preferencesForEditor(stored: StoredConsent | null): ConsentPreferences {
-  if (!stored) return { ...DENIED_PREFERENCES };
+  if (!stored) return { ...PRESELECTED_EDITOR_PREFERENCES };
   return { analytics: stored.analytics, advertising: stored.advertising };
 }
 

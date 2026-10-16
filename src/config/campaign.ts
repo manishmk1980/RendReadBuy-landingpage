@@ -302,7 +302,9 @@ export const campaignCopy = {
     managePreferences: "Manage Preferences",
     dialogTitle: "Cookie settings",
     dialogBody:
-      "Choose whether this page may use analytics and advertising cookies. Both stay off unless you allow them. Closing without saving leaves your saved choice unchanged.",
+      "Choose whether this page may use analytics and advertising cookies. Both stay off unless you allow them. Checked categories are saved only when you choose Save preferences. Closing without saving leaves your saved choice unchanged.",
+    preferencesDisclaimer:
+      "We use analytics and advertising technologies to understand website activity and measure campaign performance. You can disable either category by unchecking it and saving your preferences. You can change your choices anytime through Cookie settings.",
     analyticsLabel: "Analytics",
     analyticsHint: "Measures how this page is used.",
     advertisingLabel: "Advertising",

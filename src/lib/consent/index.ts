@@ -3,6 +3,7 @@ export {
   CONSENT_COOKIE_VERSION,
   CONSENT_RETENTION,
   DENIED_PREFERENCES,
+  PRESELECTED_EDITOR_PREFERENCES,
   consentChoiceSnapshot,
   getServerConsentSnapshot,
   isPendingConsentSnapshot,

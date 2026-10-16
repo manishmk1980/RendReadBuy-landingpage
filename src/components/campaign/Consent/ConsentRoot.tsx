@@ -47,6 +47,8 @@ function restoreFocus(id: string) {
  * applied on this document; the page is not reloaded, and no tag loader runs.
  * The 180-day lifetime stays in the cookie module, where it is marked as
  * provisional pending legal confirmation — this UI does not state that period.
+ * Checked switches before a saved choice are a suggestion only. They do not
+ * write the cookie, and tracking stays denied until the visitor saves a choice.
  */
 export function ConsentRoot({ children }: { children: ReactNode }) {
   const snapshot = useSyncExternalStore(subscribeToConsent, consentChoiceSnapshot, getServerConsentSnapshot);
@@ -166,6 +168,7 @@ function PreferencesDialog({
   const copy = campaignCopy.consent;
   const titleId = useId();
   const bodyId = useId();
+  const disclaimerId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -220,7 +223,7 @@ function PreferencesDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={bodyId}
+        aria-describedby={`${bodyId} ${disclaimerId}`}
         tabIndex={-1}
         data-pw-chat-avoid=""
         onClick={(event) => event.stopPropagation()}
@@ -245,6 +248,9 @@ function PreferencesDialog({
             onChange={toggle("advertising")}
           />
         </div>
+        <p id={disclaimerId} className={styles.disclaimer}>
+          {copy.preferencesDisclaimer}
+        </p>
         <div className={styles.actions}>
           <button type="button" className={styles.primary} onClick={onSave}>
             {copy.save}
