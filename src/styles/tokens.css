@@ -28,6 +28,27 @@
   --color-focus: #0b625f;
 
   /*
+   * Rent, Buy and Silver Membership actions. Used by Find Your Fit and the
+   * featured-book offers only, so the main Silver purchase CTAs keep
+   * --color-brand.
+   *
+   * Buy's fill is #a46a00 rather than the approved #b77700. White on #b77700
+   * is 3.72:1; #a46a00 keeps that hue and is the smallest step that clears
+   * 4.5:1 (4.53:1). Rent (5.36:1) and Silver (5.30:1) already pass. Hover
+   * shades are the approved values.
+   */
+  --color-rent-surface: #e8f6f3;
+  --color-rent: #00786f;
+  --color-rent-hover: #005f59;
+  --color-buy-surface: #fff7e8;
+  --color-buy: #a46a00;
+  --color-buy-hover: #925e00;
+  --color-silver-surface: #f0f2f5;
+  --color-silver: #3b6ea5;
+  --color-silver-hover: #285582;
+  --color-on-action: #ffffff;
+
+  /*
    * Typography: three voices from the approved hero creative. Families are
    * self-hosted via next/font in src/app/layout.tsx (closest Google matches
    * pending the brand's licensed campaign fonts). The --font-rupee-* faces

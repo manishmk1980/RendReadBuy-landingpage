@@ -43,6 +43,7 @@ export function ReaderFitSection() {
               <li
                 key={path.key}
                 className={styles.card}
+                data-path={path.key}
                 data-recommended={path.recommended}
                 style={{ "--card": index } as CSSProperties}
               >
