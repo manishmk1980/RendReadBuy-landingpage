@@ -80,11 +80,13 @@ export function CampaignFooter() {
                   </a>
                 </li>
               ))}
+              <li className={styles.item}>
+                <CookieSettingsButton className={styles.link}>
+                  {copy.cookieSettings}
+                </CookieSettingsButton>
+              </li>
             </ul>
           </nav>
-          <CookieSettingsButton className={`${styles.link} ${styles.cookieSettings}`}>
-            {copy.cookieSettings}
-          </CookieSettingsButton>
           <p className={styles.copyright}>
             © {copy.copyrightYear} {copy.copyrightHolder}
           </p>

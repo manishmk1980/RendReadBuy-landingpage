@@ -49,6 +49,7 @@ export function SilverBenefitsSection() {
               <li
                 key={benefit.icon}
                 className={styles.benefit}
+                data-emphasis={emphasisFor(benefit)}
                 style={{ "--benefit": index } as CSSProperties}
               >
                 <BenefitGlyph icon={benefit.icon} />
@@ -57,10 +58,7 @@ export function SilverBenefitsSection() {
                     <span className={styles.value}>{benefit.value}</span>
                   ) : null}
                   {benefit.lines.map((line, lineIndex) => (
-                    <span
-                      key={line}
-                      className={lineClass(benefit.icon, lineIndex, "value" in benefit)}
-                    >
+                    <span key={line} className={lineClass(lineIndex, "value" in benefit)}>
                       {line}
                     </span>
                   ))}
@@ -91,11 +89,16 @@ function HeadlineUnderline() {
   );
 }
 
-function lineClass(icon: BenefitIconName, lineIndex: number, hasValue: boolean) {
-  if (hasValue) return styles.detail;
-  if (icon === "infinity" && lineIndex === 0) return `${styles.lead} ${styles.leadEmphasis}`;
-  if (lineIndex === 0) return styles.lead;
-  return styles.detail;
+/** ₹0 charges and the two-book allowance carry the visual emphasis. */
+function emphasisFor(benefit: Benefit) {
+  if (benefit.icon === "books") return "allowance";
+  if ("value" in benefit && benefit.value) return "charge";
+  return undefined;
+}
+
+function lineClass(lineIndex: number, hasValue: boolean) {
+  if (hasValue || lineIndex > 0) return styles.detail;
+  return styles.lead;
 }
 
 function BenefitGlyph({ icon }: { icon: BenefitIconName }) {

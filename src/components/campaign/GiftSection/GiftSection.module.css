@@ -86,9 +86,16 @@
  * already opens with its own padding, so that left an empty band under the
  * labels. Phones use 2rem; tablets in the stacked layout use 3rem.
  */
+/*
+ * One quiet cream field behind the four steps. It groups them and keeps the
+ * captions off the photograph, without a border or a card shadow.
+ */
 .benefitsFrame {
   order: 3;
-  padding: var(--space-5) var(--container-gutter) var(--space-6);
+  margin-inline: var(--container-gutter);
+  padding: var(--space-4) var(--space-3) var(--space-4);
+  border-radius: 1.15rem;
+  background: rgb(255 250 242 / 0.9);
 }
 
 .eyebrow {
@@ -218,10 +225,12 @@
 
 /* Two by two on phones, one row from tablet up. */
 .benefits {
-  --bubble: 4.5rem;
+  --bubble: 4.25rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6) var(--space-4);
+  align-items: start;
+  justify-items: center;
+  gap: var(--space-5) var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -290,12 +299,17 @@
 }
 
 .label {
-  margin-top: 0.7em;
+  min-height: 2.7em;
+  margin-top: 0.65em;
   color: var(--color-ink);
   font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1.32;
   text-wrap: initial;
+}
+
+.labelLine:first-child {
+  font-weight: 600;
 }
 
 .labelLine {
@@ -304,12 +318,13 @@
 
 @media (min-width: 768px) {
   .benefitsFrame {
-    padding-bottom: var(--space-7);
+    padding: var(--space-5) var(--space-4);
   }
 
   .benefits {
+    --bubble: 4.5rem;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
+    gap: 0 var(--space-2);
   }
 
   .benefit {
@@ -438,12 +453,19 @@
     font-size: max(1rem, 1.2cqw);
   }
 
+  /*
+   * Warm cream over the sky band, above the bow. Opaque enough that the
+   * captions hold ink contrast; the gift, tag and mug stay outside it.
+   */
   .benefitsFrame {
     position: absolute;
-    top: 3.5cqw;
-    left: 43.6cqw;
-    width: 49.2cqw;
-    padding: 0;
+    top: 2.4cqw;
+    left: 41.8cqw;
+    width: 53.4cqw;
+    margin-inline: 0;
+    padding: 0.9cqw 0.85cqw 1cqw;
+    border-radius: 0.9cqw;
+    background: rgb(255 248 236 / 0.92);
   }
 
   .benefits {
@@ -455,13 +477,11 @@
   }
 
   .label {
-    margin-top: 0.75cqw;
-    font-size: max(0.8125rem, 1.02cqw);
+    min-height: 2.6em;
+    margin-top: 0.55cqw;
+    color: var(--color-ink);
+    font-size: max(0.875rem, 1.02cqw);
     line-height: 1.3;
-    text-shadow:
-      0 0 0.25em rgb(255 251 243),
-      0 0 0.5em rgb(255 251 243 / 0.95),
-      0 0 1.2em rgb(255 251 243 / 0.8);
   }
 }
 

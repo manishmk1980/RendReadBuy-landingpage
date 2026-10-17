@@ -33,9 +33,6 @@ export function ReadingEssentialsSection() {
     : affiliateProducts.length > 0
       ? affiliateProducts
       : affiliateProductPlaceholders;
-  const disclosures = [
-    ...new Set([copy.affiliateDisclosure, ...live.map((product) => product.disclosure)]),
-  ].filter(Boolean);
 
   const [lead, second] = copy.headlineLines;
   const emphasisStart = second.indexOf(copy.headlineEmphasis);
@@ -88,7 +85,6 @@ export function ReadingEssentialsSection() {
               ))}
             </ul>
           </ProductCarousel>
-          {live.length > 0 && <p className={styles.disclosure}>{disclosures.join(" ")}</p>}
         </ReadingEssentialsReveal>
       </div>
     </CampaignSection>

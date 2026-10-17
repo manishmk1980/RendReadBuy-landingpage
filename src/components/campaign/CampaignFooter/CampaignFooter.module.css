@@ -1,7 +1,8 @@
 /*
- * Minimal campaign footer: a quiet sign-off after the final scene. The final
- * conversion artwork softens into this paper tone, so only a hairline marks
- * the boundary.
+ * Compact campaign footer. The final conversion artwork softens into this
+ * paper tone, so only a hairline marks the boundary. Legal links and Cookie
+ * settings share one navigation group; the logo, social profiles and
+ * copyright stay.
  */
 .footer {
   border-top: 1px solid rgb(18 32 58 / 0.06);
@@ -13,10 +14,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-4);
+  gap: var(--space-2);
   max-width: var(--container-max);
   margin-inline: auto;
-  padding: var(--space-5) var(--container-gutter) var(--space-6);
+  padding: var(--space-4) var(--container-gutter) var(--space-3);
 }
 
 .logoLink {
@@ -29,12 +30,12 @@
 /* The official lockup, scaled by height only so its proportions never change. */
 .logo {
   width: auto;
-  height: 2.75rem;
+  height: 2.5rem;
 }
 
 /*
  * 44px targets; the negative inline margin lines the first glyph up with the
- * logo edge (and the last with the copyright on desktop).
+ * logo edge.
  */
 .social {
   display: flex;
@@ -66,18 +67,19 @@
 
 .meta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  row-gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
   font-size: var(--text-sm);
 }
 
-/* Wrapping rows are spaced, not ruled, so no separator dangles at a line end. */
+/* One group. Wrapped rows sit flush so a narrow screen does not open empty bands. */
 .links {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 var(--space-5);
+  gap: 0 0.75rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -91,9 +93,15 @@
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--color-ink);
+  font: inherit;
+  text-align: start;
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
   transition: color var(--duration-fast) var(--ease-standard);
 }
 
@@ -105,101 +113,93 @@
 
 .logoLink:focus-visible,
 .link:focus-visible,
-.socialLink:focus-visible,
-.cookieSettings:focus-visible {
+.socialLink:focus-visible {
   outline-color: var(--color-ink);
 }
 
-/*
- * Own row, so the existing legal links and their separators stay as they are.
- * The control is a button: it reopens preferences on this page.
- */
-.cookieSettings {
-  flex-basis: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  text-align: start;
-}
-
 .copyright {
-  width: 100%;
+  margin: 0;
+  padding-bottom: 0.35rem;
   color: var(--color-ink);
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
-@media (min-width: 1024px) {
-  /* Logo on the left; the social row sits above the unchanged legal row. */
+/* Logo and social share one row once both fit beside the gutter. */
+@media (min-width: 768px) {
   .inner {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       "logo social"
-      "logo meta";
+      "meta meta";
     align-items: center;
-    gap: 0 var(--space-6);
-    max-width: none;
-    padding: var(--space-5) 6vw;
+    column-gap: var(--space-5);
+    row-gap: 0;
+    padding-block: var(--space-3);
   }
 
   .logoLink {
     grid-area: logo;
   }
 
-  .logo {
-    height: 3.5rem;
-  }
-
   .social {
     grid-area: social;
     justify-self: end;
+    margin-inline: 0 -0.75rem;
   }
 
   .meta {
-    display: grid;
     grid-area: meta;
-    grid-template-columns: auto auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inner {
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
-      "links copyright"
-      "cookies cookies";
+      "logo social"
+      "logo meta";
     align-items: center;
-    justify-content: end;
-    justify-self: end;
+    column-gap: var(--space-6);
+    row-gap: 0;
+    max-width: none;
+    padding: var(--space-3) 6vw;
   }
 
-  .meta nav {
-    grid-area: links;
+  .logo {
+    height: 3.25rem;
   }
 
-  .cookieSettings {
-    grid-area: cookies;
-    flex-basis: auto;
-    justify-self: end;
-    text-align: end;
+  .meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    column-gap: var(--space-2);
   }
 
-  /* One row: hairline separators between links, and a wider gap before the copyright. */
   .links {
-    flex-wrap: nowrap;
+    justify-content: flex-end;
     gap: 0;
   }
 
+  /* Hairlines stay inside the group. A wider one separates the copyright. */
   .item:not(:last-child)::after,
   .links::after {
     content: "";
     width: 1px;
-    height: 1.1em;
-    margin-inline: var(--space-4);
+    height: 1em;
+    margin-inline: var(--space-3);
     background: rgb(18 32 58 / 0.22);
   }
 
   .links::after {
-    margin-inline: var(--space-6);
+    margin-inline: var(--space-4);
   }
 
   .copyright {
-    grid-area: copyright;
     width: auto;
+    padding-bottom: 0;
+    white-space: nowrap;
   }
 }

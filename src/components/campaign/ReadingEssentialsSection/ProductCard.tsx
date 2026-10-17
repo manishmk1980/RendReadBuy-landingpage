@@ -26,7 +26,8 @@ export function ProductCard({ product, live }: ProductCardProps) {
         {live && product.affiliateUrl ? (
           <CampaignButton
             href={product.affiliateUrl}
-            rel="sponsored"
+            target="_blank"
+            rel="noopener noreferrer sponsored"
             variant="secondary"
             trackEvent="affiliate_product_click"
             trackParams={{
@@ -38,6 +39,7 @@ export function ProductCard({ product, live }: ProductCardProps) {
           >
             {label}
             <ArrowIcon />
+            <span className="visually-hidden"> {campaignCopy.footer.newTabNotice}</span>
           </CampaignButton>
         ) : (
           <span className={styles.cta} data-preview="true" title={copy.placeholder.actionNote}>

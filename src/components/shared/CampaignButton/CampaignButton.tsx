@@ -17,8 +17,10 @@ type CampaignButtonProps = Destination & {
   variant?: "primary" | "secondary" | "text";
   trackEvent?: CampaignEvent;
   trackParams?: CampaignEventParams;
-  /** Affiliate destinations must pass "sponsored". */
+  /** Affiliate destinations must pass "sponsored". New-tab links also pass noopener and noreferrer. */
   rel?: string;
+  /** Opens the destination in a new tab. Pair with rel="noopener noreferrer". */
+  target?: "_blank";
   /** One-time attention cue (styles/motion.css); never hides or delays the CTA. */
   cue?: "load" | "reveal";
   className?: string;
@@ -34,6 +36,7 @@ export function CampaignButton({
   trackEvent,
   trackParams,
   rel,
+  target,
   cue,
   className,
   ...destination
@@ -46,6 +49,7 @@ export function CampaignButton({
   return (
     <a
       href={href}
+      target={target}
       rel={rel}
       className={[styles.button, className].filter(Boolean).join(" ")}
       data-variant={variant}
