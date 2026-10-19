@@ -239,6 +239,27 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     expect(localStorage.getItem("primewayz_chat_session_id")).toBeNull();
   });
 
+  it("does not create a chat session merely because the page loaded", async () => {
+    stubFetch(healthy);
+    await expect(loadCampaignWidget()).resolves.toBe("loaded");
+    await waitFor(() => Boolean(widgetHost()), "widget host");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "GET /api/platform/capabilities",
+      "GET /api/chat/availability",
+    ]);
+    expect(localStorage.getItem("rrb_silver_chat_session_id")).toBeNull();
+    expect(localStorage.getItem("rrb_silver_chat_visitor_name")).toBeNull();
+    expect(localStorage.getItem("rrb_silver_chat_visitor_email")).toBeNull();
+    expect(sessionStorage.getItem("rrb_silver_chat_panel_open")).toBeNull();
+    expect(sessionStorage.getItem("rrb_silver_chat_open_tracked")).toBeNull();
+    expect(sessionStorage.getItem("rrb_silver_chat_first_landing")).toBeNull();
+    const embed = JSON.parse(document.getElementById("pwi-chat-config")!.textContent!);
+    for (const key of SERVER_OWNED_IDENTITY_KEYS) expect(embed).not.toHaveProperty(key);
+    expect(document.querySelector("a")?.getAttribute("href")).toBe("https://rentreadbuy.com/subscription-plans");
+  });
+
   it("installs once even if the script executes twice", async () => {
     stubFetch(healthy);
     await loadCampaignWidget();

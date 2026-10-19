@@ -13,6 +13,14 @@ const valid: SharedChatEnv = {
   widgetUrl: "https://chat.example.test/embed/pw-chat.js",
 };
 
+/** Public values for the Silver tenant. Enablement stays off until activation is approved. */
+const publishedSilver: SharedChatEnv = {
+  enabled: "off",
+  apiBaseUrl: "https://uk.primewayz.com",
+  widgetUrl: "https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js",
+  widgetIntegrity: "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
+};
+
 const settings: SharedChatSettings = {
   apiBaseUrl: "https://chat.example.test",
   widgetUrl: "https://chat.example.test/embed/pw-chat.js",
@@ -88,6 +96,21 @@ describe("resolveSharedChatSettings", () => {
     const good = resolveSharedChatSettings({ ...valid, widgetIntegrity: "sha384-abc+/def=" }, true);
     expect(good.status === "ready" && good.settings.widgetIntegrity).toBe("sha384-abc+/def=");
     expect(resolveSharedChatSettings({ ...valid, widgetIntegrity: "md5-abc" }, true).status).toBe("invalid");
+  });
+
+  it("keeps the published Silver configuration off", () => {
+    expect(resolveSharedChatSettings(publishedSilver, true)).toEqual({ status: "disabled" });
+  });
+
+  it("accepts the published Silver URLs and integrity only when explicitly enabled", () => {
+    expect(resolveSharedChatSettings({ ...publishedSilver, enabled: "on" }, true)).toEqual({
+      status: "ready",
+      settings: {
+        apiBaseUrl: "https://uk.primewayz.com",
+        widgetUrl: "https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js",
+        widgetIntegrity: "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
+      },
+    });
   });
 });
 

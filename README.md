@@ -38,11 +38,13 @@ npm run lint
 | `NEXT_PUBLIC_SITE_URL` | unset | Confirmed production origin of this page. Required at build time for the canonical URL, `og:url`, the social preview image, the sitemap entry and JSON-LD URLs; all are omitted while it is unset. |
 | `NEXT_PUBLIC_GTM_ID` | unset | Google Tag Manager container (`GTM-…`). GTM loads only when set. RentReadBuy's container is `GTM-MRLNJ7Q`; do not set it until consent handling and duplicate tracking are checked. |
 | `NEXT_PUBLIC_ATTRIBUTION_PASSTHROUGH` | `on` | `on` copies landing UTMs and ad click IDs onto RentReadBuy links. Set `off` when this page shares RentReadBuy's GA4 property. |
-| `NEXT_PUBLIC_SHARED_CHAT_ENABLED` | `off` | `on` or `true` loads the shared Primewayz visitor chat. Any other value, including unset, leaves chat off: no widget script and no chat request. |
-| `NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL` | unset | Primewayz public chat API. https only, with no credentials, query or fragment. The preview origin is `https://uk.primewayz.com`. Chat stays off while this is empty. |
-| `NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL` | unset | Versioned `pw-chat.js` for widget 1.1.0. An https URL such as `https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js`, or a same-origin path when a copy is served from this site. Chat stays off while this is empty. |
-| `NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY` | unset | Optional SRI hash (`sha256`, `sha384` or `sha512`) of that exact widget file. Leave empty to skip SRI. For widget 1.1.0 the sha384 hash is `sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO`. A cross-origin URL with a hash is loaded as `crossorigin="anonymous"`. |
+| `NEXT_PUBLIC_SHARED_CHAT_ENABLED` | `off` | `on` or `true` loads the shared Primewayz visitor chat. Any other value, including `off` and unset, leaves chat off: no widget script and no chat request. Leave this `off` until activation is approved. |
+| `NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL` | unset | Approved value: `https://uk.primewayz.com`. https only, with no credentials, query or fragment. Chat stays off while this is empty, and also while enablement is not `on` or `true`. |
+| `NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL` | unset | Approved value: `https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js`. An https URL, or a same-origin path when a copy is served from this site. Chat stays off while this is empty. |
+| `NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY` | unset | Approved value for widget 1.1.0: `sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO`. A cross-origin URL with a hash is loaded as `crossorigin="anonymous"`. Leave empty to skip SRI. |
 
 Shared chat is off unless it is explicitly enabled and both URLs are valid. The Primewayz UK service owns tenant configuration, conversations, sessions, replies, leads and administration. This page only loads the public widget. It does not proxy chat traffic and it does not ship administrative credentials.
+
+Leave the flag `off` in production. With the flag on, the published widget loads after the page is idle and before any cookie choice, then requests Primewayz UK capabilities and availability. It does not create a conversation or a chat session id until the visitor opens chat. The cookie banner on this page describes analytics and advertising only. Do not enable chat until a privacy disclosure that covers this service is approved.
 
 See `.env.example` for a template.

@@ -30,6 +30,24 @@ afterEach(() => {
 });
 
 describe("SharedChat", () => {
+  it("stays off for the published Silver configuration", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js");
+    vi.stubEnv(
+      "NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY",
+      "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
+    );
+    const SharedChat = await freshSharedChat();
+
+    const { container } = render(<SharedChat />);
+    await act(() => vi.runAllTimersAsync());
+
+    expect(container.innerHTML).toBe("");
+    expect(widgetScripts()).toHaveLength(0);
+    expect(document.getElementById("pwi-chat-config")).toBeNull();
+  });
+
   it("is off by default: renders nothing and loads no script", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", undefined);
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://chat.example.test");
