@@ -154,33 +154,53 @@
 }
 
 /*
- * Cards 1–2 are warm cream paper; the Silver card is teal-tinted, carries a
- * teal keyline and deeper shadow, and is the only filled CTA.
+ * Three equal cards. Rent is soft teal, Buy is warm ivory, Silver is pearl.
+ * Borders, radius and shadow depth stay shared so the row remains balanced.
+ * Navy type sits on each surface; the action colour is reserved for the CTA.
  */
 .card {
   --card-pad: var(--space-5);
   --card-radius: 0.75rem;
-  --card-shadow: 0 18px 30px -22px rgb(74 48 20 / 0.55), 0 2px 6px -3px rgb(74 48 20 / 0.18);
-  --card-shadow-hover: 0 28px 40px -24px rgb(74 48 20 / 0.6), 0 4px 10px -4px rgb(74 48 20 / 0.2);
+  --card-shadow: 0 18px 30px -22px rgb(18 32 58 / 0.28), 0 2px 6px -3px rgb(18 32 58 / 0.16);
+  --card-shadow-hover: 0 28px 40px -24px rgb(18 32 58 / 0.36), 0 4px 10px -4px rgb(18 32 58 / 0.18);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 0;
   padding: var(--card-pad);
-  border: 1px solid rgb(120 88 52 / 0.16);
+  border: 1px solid rgb(18 32 58 / 0.12);
   border-radius: var(--card-radius);
-  background: rgb(255 250 241 / 0.94);
+  background-color: var(--color-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.33 0 0 0 0 0.2 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   box-shadow: var(--card-shadow);
+  color: var(--color-ink);
   text-align: center;
   transition: box-shadow 420ms var(--ease-out);
 }
 
-.card[data-recommended="true"] {
-  --card-shadow: 0 22px 36px -22px rgb(2 84 88 / 0.6), 0 2px 8px -3px rgb(2 84 88 / 0.22);
-  --card-shadow-hover: 0 34px 48px -24px rgb(2 84 88 / 0.66), 0 6px 14px -5px rgb(2 84 88 / 0.24);
-  border: 1.5px solid color-mix(in srgb, var(--color-brand) 42%, transparent);
-  background: rgb(226 243 238 / 0.95);
+.card[data-path="occasional"] {
+  --action: var(--color-rent);
+  --action-hover: var(--color-rent-hover);
+  --card-shadow: 0 18px 30px -22px rgb(0 95 89 / 0.32), 0 2px 6px -3px rgb(18 32 58 / 0.16);
+  --card-shadow-hover: 0 28px 40px -24px rgb(0 95 89 / 0.4), 0 4px 10px -4px rgb(18 32 58 / 0.18);
+  background-color: var(--color-rent-surface);
+}
+
+.card[data-path="keep"] {
+  --action: var(--color-buy);
+  --action-hover: var(--color-buy-hover);
+  --card-shadow: 0 18px 30px -22px rgb(146 94 0 / 0.28), 0 2px 6px -3px rgb(18 32 58 / 0.16);
+  --card-shadow-hover: 0 28px 40px -24px rgb(146 94 0 / 0.38), 0 4px 10px -4px rgb(18 32 58 / 0.18);
+  background-color: var(--color-buy-surface);
+}
+
+.card[data-path="regular"] {
+  --action: var(--color-silver);
+  --action-hover: var(--color-silver-hover);
+  --card-shadow: 0 18px 30px -22px rgb(40 85 130 / 0.3), 0 2px 6px -3px rgb(18 32 58 / 0.16);
+  --card-shadow-hover: 0 28px 40px -24px rgb(40 85 130 / 0.4), 0 4px 10px -4px rgb(18 32 58 / 0.18);
+  background-color: var(--color-silver-surface);
 }
 
 .iconWrap {
@@ -207,6 +227,7 @@
   position: relative;
   margin-top: 0.55em;
   padding-bottom: 0.32em;
+  color: var(--color-ink);
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
@@ -241,7 +262,11 @@
   margin-top: auto;
   padding: 0 1em;
   gap: 0.65em;
+  border: 1px solid transparent;
   border-radius: 0.45rem;
+  background: var(--action, var(--color-rent));
+  box-shadow: 0 10px 22px -14px rgb(18 32 58 / 0.45);
+  color: var(--color-on-action);
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.005em;
@@ -251,31 +276,20 @@
     box-shadow var(--duration-base) var(--ease-standard);
 }
 
-.card a.cta[data-variant="secondary"] {
-  border: 1px solid rgb(18 32 58 / 0.2);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  box-shadow: 0 6px 12px -10px rgb(18 32 58 / 0.5);
+.card a.cta[data-variant]:hover,
+.card a.cta[data-variant]:active {
+  border-color: transparent;
+  background: var(--action-hover, var(--color-rent-hover));
+  color: var(--color-on-action);
 }
 
-.card a.cta[data-variant="secondary"]:hover {
-  border-color: rgb(18 32 58 / 0.45);
-  background: #fffdf8;
+.card a.cta[data-variant]:hover {
+  box-shadow: 0 14px 26px -14px rgb(18 32 58 / 0.5);
 }
 
-.card a.cta[data-variant="primary"] {
-  background: var(--color-brand-strong);
-  color: var(--color-surface);
-  box-shadow: 0 10px 22px -14px rgb(2 84 88 / 0.85);
-}
-
-.card a.cta[data-variant="primary"]:hover {
-  background: color-mix(in srgb, var(--color-brand-strong) 82%, var(--color-ink));
-  box-shadow: 0 14px 26px -14px rgb(2 84 88 / 0.9);
-}
-
-.card a.cta[data-variant="primary"]:focus-visible {
-  outline-color: var(--color-ink);
+.card a.cta:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
 }
 
 .arrow {
@@ -294,9 +308,40 @@
   translate: 0.18em 0;
 }
 
+/*
+ * Phones. Three stacked cards do not need the 6rem tail or the 3rem break
+ * that the wider flow uses, and the Silver label needs a little more of the
+ * button's width so it does not sit flush on two lines. The 768px row and
+ * the 1200px composition keep the rules outside this block.
+ */
+@media (max-width: 767px) {
+  .content {
+    gap: clamp(1.75rem, 6cqw, 2.5rem);
+    padding-bottom: clamp(3rem, 12cqw, 4rem);
+  }
+
+  .cards {
+    gap: 1.125rem;
+  }
+
+  .card {
+    --card-pad: 1.125rem 1rem 1rem;
+  }
+
+  .cardBody {
+    margin-bottom: 1rem;
+  }
+
+  .card a.cta {
+    padding-inline: 0.75rem;
+    line-height: 1.25;
+  }
+}
+
 @media (min-width: 768px) {
   .cards {
-    grid-template-columns: 1fr 1fr 1.08fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
     gap: var(--space-4);
   }
 
@@ -430,7 +475,8 @@
   }
 
   .card a.cta {
-    min-height: 2.6cqw;
+    /* Silver's label wraps at this width; one min-height keeps every button equal. */
+    min-height: max(2.6cqw, 2.75rem);
     border-radius: 0.38cqw;
     font-size: max(0.875rem, 1cqw);
   }

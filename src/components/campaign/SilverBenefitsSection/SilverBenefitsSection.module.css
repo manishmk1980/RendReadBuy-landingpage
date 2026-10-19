@@ -157,10 +157,20 @@
   line-height: 1.5;
 }
 
+/*
+ * A warm paper field so the five benefits read together. No border: the
+ * photograph stays the scene, and the type sits on cream.
+ */
+.benefitsFrame {
+  padding: var(--space-4) var(--space-3);
+  border-radius: 1rem;
+  background: rgb(255 250 242 / 0.82);
+}
+
 .benefits {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-5);
+  gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -200,12 +210,23 @@
 }
 
 .value {
-  color: var(--color-brand);
+  color: var(--color-brand-strong);
   font-size: 1.85em;
   font-weight: 700;
   font-variant-numeric: lining-nums;
   letter-spacing: -0.03em;
   line-height: 1;
+}
+
+/* The two-book allowance and the ₹0 lines are the claims to see first. */
+.benefit[data-emphasis="allowance"] .lead {
+  color: var(--color-brand-strong);
+  font-size: 1.12em;
+  font-weight: 700;
+}
+
+.benefit[data-emphasis="charge"] .value {
+  font-size: 2.05em;
 }
 
 .lead,
@@ -217,10 +238,16 @@
   font-weight: 500;
 }
 
-/* brand-strong: on the sunlit floor --color-brand falls under 4.5:1. */
-.leadEmphasis {
-  color: var(--color-brand-strong);
-  font-weight: 700;
+@media (min-width: 768px) and (max-width: 1023px) {
+  .benefits {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5) var(--space-6);
+  }
+
+  /* The quota line is the long supporting claim, so it uses the full row. */
+  .benefit:last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 /* ---------------------------------------------------------------- desktop */
@@ -311,7 +338,10 @@
    * (source y ~750, which is 43.0cqw) and clear of the open book (ends ~36cqw).
    */
   .benefitsFrame {
-    margin-inline: 5.2cqw;
+    margin-inline: 4.6cqw;
+    padding: 1.05cqw 0.7cqw 1.15cqw;
+    border-radius: 1cqw;
+    background: rgb(255 248 236 / 0.9);
   }
 
   .benefits {
@@ -354,36 +384,19 @@
   }
 
   .label {
-    position: relative;
-    isolation: isolate;
     max-width: 16cqw;
-    font-size: 0.98cqw;
-    line-height: 1.22;
-    text-shadow:
-      0 0 0.35em rgb(255 248 236 / 0.95),
-      0 0 0.9em rgb(255 246 230 / 0.75);
-  }
-
-  /*
-   * Feathered pool of light under the words, as in How Silver works: the
-   * floor's shadows run behind the right-hand benefits.
-   */
-  .label::before {
-    content: "";
-    position: absolute;
-    inset: -0.6em -1.2em;
-    z-index: -1;
-    background: radial-gradient(
-      closest-side,
-      rgb(255 247 230 / 0.88),
-      rgb(255 247 230 / 0.62) 60%,
-      rgb(255 247 230 / 0)
-    );
+    color: var(--color-ink);
+    font-size: max(0.8125rem, 0.95cqw);
+    line-height: 1.25;
   }
 
   .value {
     margin-bottom: 0.12em;
-    font-size: 2.05em;
+    font-size: 2.2em;
+  }
+
+  .benefit[data-emphasis="charge"] .value {
+    font-size: 2.35em;
   }
 }
 

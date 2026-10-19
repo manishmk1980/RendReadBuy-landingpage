@@ -283,6 +283,85 @@
   display: none;
 }
 
+/*
+ * Phones and tablets. The 2×2 grid stays in list order (1–2, then 3–4).
+ * The existing arrows sit in the gutters: rightward between a pair, and one
+ * downward cue from step 2 into the next row, so the path is readable without
+ * a second component. Labels may wrap inside the disc instead of running
+ * through its edge. Desktop (1024px and up) does not use this block.
+ */
+@media (max-width: 1023px) {
+  .content {
+    gap: clamp(1.75rem, 4.5cqw, var(--space-7));
+    /* Clears the following section's tear, which grows with the viewport,
+       without the fixed 6rem band that leaves a blank under the reassurance
+       on a phone. */
+    padding-bottom: clamp(3.5rem, 12cqw, var(--space-9));
+  }
+
+  .stepsFrame {
+    /* Room for the gutter cue without letting the discs touch it. */
+    --gap: 1.85rem;
+  }
+
+  .steps {
+    --row-gap: 2.35rem;
+    gap: var(--row-gap) var(--gap);
+  }
+
+  .label {
+    max-width: 76%;
+    text-wrap: balance;
+  }
+
+  .labelLine {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .arrow {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    width: 1.15rem;
+    height: auto;
+    fill: none;
+    stroke: var(--color-brand);
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+    filter: drop-shadow(0 0 1.5px rgb(255 249 236)) drop-shadow(0 0 0.5px rgb(255 249 236 / 0.9));
+  }
+
+  /* Steps 1 and 3: the cue sits in the column gutter, pointing at the next step. */
+  .step:nth-child(odd) .arrow {
+    top: 46%;
+    left: calc(100% + (var(--gap) - 1.15rem) / 2);
+    translate: 0 -50%;
+  }
+
+  /* Step 2: the same arrow turned down, centred in the row gutter. */
+  .step:nth-child(2) .arrow {
+    top: calc(100% + var(--row-gap) / 2);
+    left: calc(var(--gap) / -2);
+    translate: -50% -50%;
+    rotate: 90deg;
+  }
+}
+
+/* The smallest discs need a little more of their interior for a wrapped line. */
+@media (max-width: 479px) {
+  .bubble {
+    padding: 13% 8% 10%;
+  }
+
+  .icon {
+    width: 28%;
+    margin-bottom: 2%;
+  }
+}
+
 .reassuranceFrame {
   display: flex;
   justify-content: center;

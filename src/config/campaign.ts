@@ -164,7 +164,7 @@ export const campaignCopy = {
     headlineLines: ["Which option", "is right for you?"],
     headlineEmphasis: "right for you?",
     body: "Choose the option that matches your reading habit.",
-    /** Rendered left to right; only the `recommended` path gets the filled Silver CTA. */
+    /** Rendered left to right. Silver is `recommended`; each path has its own filled action colour. */
     paths: [
       {
         key: "occasional",
@@ -231,10 +231,10 @@ export const campaignCopy = {
   },
   featuredBook: {
     eyebrow: "Featured book",
-    /** First line in ink; the second ends in `headlineEmphasis`, set in brand teal with the coral underline. */
-    headlineLines: ["Trending with", "readers right now."],
-    headlineEmphasis: "right now.",
-    body: "A popular choice among readers. Available to rent or buy on RentReadBuy.",
+    /** First line in ink; the second is `headlineEmphasis`, set in brand teal with the coral underline. */
+    headlineLines: ["Timeless stories.", "New perspectives."],
+    headlineEmphasis: "New perspectives.",
+    body: "Discover unforgettable stories told through fresh perspectives. This week's featured read brings the world of the Mahabharata to life.",
     /** Used when no verified price is configured; with one, `rentPriced` / `buyPriced` precede it. */
     rentCta: "Rent Book",
     buyCta: "Buy Book",
@@ -248,21 +248,18 @@ export const campaignCopy = {
     },
   },
   readingEssentials: {
-    eyebrow: "Reading essentials",
+    /** Uppercased by the shared eyebrow style. */
+    eyebrow: "Festive reading & gifting",
     /** First line in ink; the second ends in `headlineEmphasis`, set in brand teal with the coral underline. */
-    headlineLines: ["Useful companions", "for your reading time."],
-    headlineEmphasis: "your reading time.",
-    body: "Make your reading time more comfortable and enjoyable with these handpicked products.",
-    carouselLabel: "Reading essentials products",
+    headlineLines: ["Celebrate traditions.", "Make time for stories."],
+    headlineEmphasis: "stories.",
+    body: "Thoughtful festive gifts, stories that connect generations, and little comforts that make more room for reading.",
+    carouselLabel: "Festive reading and gifting products",
     previous: "Previous products",
     next: "Next products",
     /** Prefixes the merchant name unless a product sets its own `ctaLabel`. */
     ctaPrefix: "View on",
     imageComingSoon: "Product image coming soon",
-    // TODO(compliance): confirm the affiliate disclosure wording.
-    /** Shown beside the products only while at least one affiliate link is live. */
-    affiliateDisclosure:
-      "RentReadBuy may earn a commission from qualifying purchases made through these links.",
     /** Development-only marking while no approved products are configured. */
     placeholder: {
       flag: "Section 9 is awaiting approved affiliate products",
@@ -293,12 +290,32 @@ export const campaignCopy = {
       cta: "Go to RentReadBuy",
     },
   },
+  consent: {
+    bannerTitle: "Cookies on this page",
+    bannerBody:
+      "Analytics and advertising cookies are optional. Both stay off until you choose. This page saves your choice in this browser, and you can change it any time from Cookie settings in the footer.",
+    acceptAll: "Accept All",
+    rejectOptional: "Reject Optional",
+    managePreferences: "Manage Preferences",
+    dialogTitle: "Cookie settings",
+    dialogBody:
+      "Choose whether this page may use analytics and advertising cookies. Both stay off unless you allow them. Checked categories are saved only when you choose Save preferences. Closing without saving leaves your saved choice unchanged.",
+    preferencesDisclaimer:
+      "We use analytics and advertising technologies to understand website activity and measure campaign performance. You can disable either category by unchecking it and saving your preferences. You can change your choices anytime through Cookie settings.",
+    analyticsLabel: "Analytics",
+    analyticsHint: "Measures how this page is used.",
+    advertisingLabel: "Advertising",
+    advertisingHint: "Measures advertising on this page.",
+    save: "Save preferences",
+    close: "Close",
+  },
   footer: {
     navLabel: "Legal and support",
     terms: "Terms",
     privacy: "Privacy",
     returns: "Returns Policy",
     support: "Contact / Support",
+    cookieSettings: "Cookie settings",
     socialLabel: "RentReadBuy on social media",
     socialLinkPrefix: "RentReadBuy on",
     newTabNotice: "(opens in a new tab)",

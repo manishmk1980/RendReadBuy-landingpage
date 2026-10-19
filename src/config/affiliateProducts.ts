@@ -22,17 +22,65 @@ export interface AffiliateProduct {
   imageAlt?: string;
   /** Approved affiliate destination for this exact product. */
   affiliateUrl?: string;
-  /** Retailer / programme name, used for the CTA, disclosure and analytics. */
+  /** Retailer / programme name, used for the CTA and analytics. */
   merchant: string;
   /** Overrides the default "View on {merchant}" label. */
   ctaLabel?: string;
   status: AffiliateProductStatus;
-  /** Programme-specific disclosure, shown once when any of its links are live. */
-  disclosure?: string;
 }
 
-// TODO(content): supply approved products, product imagery and affiliate URLs.
-export const affiliateProducts: readonly AffiliateProduct[] = [];
+/**
+ * Approved festive products. Each short link was opened and matched to its
+ * Amazon.in listing before it was assigned — the list order below is the
+ * campaign order, not the order the links were supplied in.
+ *
+ * B01yXDjqL → My Little Book of Festivals boxset (0143473492)
+ * B03wpJNfy → Tales from Indian Mythology, collection of 10 books (9354400507)
+ * B0fv3IwUs → Philips 1000 Series NA120/00 (B0D14BB5XY)
+ * B09icsirQ → One94Store gold rechargeable table lamp (B0FG7K4JCH)
+ */
+export const affiliateProducts: readonly AffiliateProduct[] = [
+  {
+    id: "my-little-book-of-festivals",
+    title: "My Little Book of Festivals (Boxset)",
+    shortDescription: "Introduce little readers to India's festivals, traditions and celebrations.",
+    imageUrl: "/assets/sections/gift/rrb-festive-2026-festival-books.jpg",
+    imageAlt: "My Little Book of Festivals boxset, with board books on Navratri, Holi and Diwali",
+    affiliateUrl: "https://link.amazon/B01yXDjqL",
+    merchant: "Amazon",
+    status: "approved",
+  },
+  {
+    id: "tales-from-indian-mythology",
+    title: "Tales from Indian Mythology: Collection of 10 Books",
+    shortDescription: "Bring timeless Indian legends into your family's reading moments.",
+    imageUrl: "/assets/sections/gift/rrb-festive-2026-mythology-books.jpg",
+    imageAlt: "Tales from Indian Mythology, a collection of 10 illustrated books",
+    affiliateUrl: "https://link.amazon/B03wpJNfy",
+    merchant: "Amazon",
+    status: "approved",
+  },
+  {
+    id: "philips-na120-air-fryer",
+    title: "Philips 1000 Series NA120/00 Air Fryer",
+    shortDescription: "Make festive cooking more convenient and find more time for your next chapter.",
+    imageUrl: "/assets/sections/gift/rrb-festive-2026-philips-air-fryer.jpg",
+    imageAlt: "Philips 1000 Series NA120/00 air fryer",
+    affiliateUrl: "https://link.amazon/B0fv3IwUs",
+    merchant: "Amazon",
+    status: "approved",
+  },
+  {
+    id: "one94store-gold-table-lamp",
+    title: "One94Store Gold Rechargeable Table Lamp",
+    shortDescription: "Set a warm, peaceful mood for reading after the festivities.",
+    imageUrl: "/assets/sections/gift/rrb-festive-2026-gold-table-lamp.jpg",
+    imageAlt: "One94Store gold rechargeable table lamp, switched on",
+    affiliateUrl: "https://link.amazon/B09icsirQ",
+    merchant: "Amazon",
+    status: "approved",
+  },
+];
 
 /**
  * Development-only stand-ins so the carousel can be reviewed, including

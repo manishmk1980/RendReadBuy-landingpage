@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Kalam, Literata } from "next/font/google";
 import localFont from "next/font/local";
+import Script from "next/script";
 import { campaignMeta } from "@/config/campaign";
 import { AnalyticsListener } from "@/lib/analytics/AnalyticsListener";
+import { consentBootstrapSource } from "@/lib/analytics/consentMode";
+import { ConsentModeSync } from "@/lib/analytics/ConsentModeSync";
 import { TagManager } from "@/lib/analytics/TagManager";
 import "@/styles/tokens.css";
 import "@/styles/motion.css";
@@ -111,8 +114,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${editorialSerif.variable} ${cleanSans.variable} ${handwritten.variable} ${rupeeSerif.variable} ${rupeeSans.variable}`}
     >
       <body>
+        <Script id="rrb-consent-bootstrap" strategy="beforeInteractive">
+          {consentBootstrapSource()}
+        </Script>
         {children}
         <AnalyticsListener />
+        <ConsentModeSync />
         <TagManager />
       </body>
     </html>

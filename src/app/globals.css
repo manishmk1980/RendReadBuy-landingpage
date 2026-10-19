@@ -13,7 +13,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  scroll-padding-top: var(--header-height);
+  /* Header height plus the 3px focus ring and its 3px offset. */
+  scroll-padding-top: calc(var(--header-height) + 6px);
 }
 
 /* Matches CampaignHeader: on short viewports the header does not stay fixed. */

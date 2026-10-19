@@ -47,6 +47,6 @@ Shared chat is off unless it is explicitly enabled and both URLs are valid. Prim
 
 Leave the flag `off` in production until activation is approved. With the flag on, the footer shows the chat privacy notice and links to `https://rentreadbuy.com/privacy-policy`. Choosing **Open chat support** loads the published widget. Only then does it request capabilities and availability. Chat session storage is created when the panel opens, which that same action does. A failed script or API response removes or hides the launcher and leaves membership signup working.
 
-This page does not set `__PRIMEWAYZ_ANALYTICS_CONSENT__`, so the widget does not forward chat events into analytics. It also does not read or write an analytics or advertising consent choice. No consent banner is part of this branch.
+This page does not set `__PRIMEWAYZ_ANALYTICS_CONSENT__`, so the widget does not forward chat events into analytics. The Silver page has its own cookie banner and footer Cookie settings. Those controls save an analytics and advertising choice for this browser only, and they do not enable chat.
 
 See `.env.example` for a template.

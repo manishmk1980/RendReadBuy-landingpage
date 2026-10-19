@@ -15,6 +15,10 @@ interface FeaturedBookBackdropProps {
 /**
  * Clipping frame for the artwork. Scroll progress and the pointer both drift
  * the image inside it; the frame itself never moves.
+ *
+ * The scenic background is a CSS image on the drifting layer, so it stays
+ * decorative. Foreground children (the book mockup) are not hidden from
+ * assistive technology and drift with the sill they stand on.
  */
 export function FeaturedBookBackdrop({
   src,
@@ -26,7 +30,7 @@ export function FeaturedBookBackdrop({
   usePointerParallax(ref, { xVar: "--fb-px", yVar: "--fb-py" });
 
   return (
-    <div ref={ref} className={className} aria-hidden="true" data-deferred-art="">
+    <div ref={ref} className={className} data-deferred-art="">
       <div
         className={imageClassName}
         style={{ "--fb-art": `url("${src}")` } as CSSProperties}
