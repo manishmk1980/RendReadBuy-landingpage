@@ -3,6 +3,7 @@ import { brand } from "@/config/brand";
 import { campaignCopy } from "@/config/campaign";
 import { links, socialProfiles } from "@/config/links";
 import { trackingAttributes } from "@/lib/analytics";
+import { SharedChat } from "@/lib/sharedChat/SharedChat";
 import { SocialIcon } from "./SocialIcon";
 import styles from "./CampaignFooter.module.css";
 
@@ -86,6 +87,7 @@ export function CampaignFooter() {
           </p>
         </div>
       </div>
+      <SharedChat />
     </footer>
   );
 }
