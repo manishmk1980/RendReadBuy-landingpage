@@ -4,7 +4,6 @@ import localFont from "next/font/local";
 import { campaignMeta } from "@/config/campaign";
 import { AnalyticsListener } from "@/lib/analytics/AnalyticsListener";
 import { TagManager } from "@/lib/analytics/TagManager";
-import { SharedChat } from "@/lib/sharedChat/SharedChat";
 import "@/styles/tokens.css";
 import "@/styles/motion.css";
 import "./globals.css";
@@ -115,7 +114,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <AnalyticsListener />
         <TagManager />
-        <SharedChat />
       </body>
     </html>
   );

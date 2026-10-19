@@ -51,10 +51,10 @@ describe("campaign landing page", () => {
       expect(within(faqRegion).getByText(faq.question)).toBeTruthy();
     }
     expect(document.querySelector('script[data-rrb-shared-chat]')).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
   });
 
   it("keeps signup and FAQs working when the chat script fails to load", async () => {
-    vi.useFakeTimers();
     render(
       <>
         <CampaignPage />
@@ -71,9 +71,12 @@ describe("campaign landing page", () => {
       </>,
     );
     const before = membershipLinks().map((link) => link.getAttribute("href"));
-    await act(() => vi.runAllTimersAsync());
-    vi.useRealTimers();
+    expect(document.querySelector('script[data-rrb-shared-chat="widget"]')).toBeNull();
 
+    await act(async () => {
+      screen.getByRole("button", { name: "Open chat support" }).click();
+      await Promise.resolve();
+    });
     const script = document.querySelector('script[data-rrb-shared-chat="widget"]');
     expect(script).not.toBeNull();
     await act(async () => {
@@ -81,6 +84,7 @@ describe("campaign landing page", () => {
     });
 
     expect(document.querySelector('script[data-rrb-shared-chat]')).toBeNull();
+    expect(screen.getByRole("status").textContent).toMatch(/unavailable/i);
     expect(membershipLinks().map((link) => link.getAttribute("href"))).toEqual(before);
     expect(screen.getByText(publishedFaqs[0].question)).toBeTruthy();
   });

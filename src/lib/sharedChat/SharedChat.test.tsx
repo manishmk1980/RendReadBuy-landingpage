@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
-import { act, cleanup, render } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { sharedChatDisclosure } from "@/config/sharedChat";
+import { links } from "@/config/links";
 import type { SharedChatResolution } from "./config";
 
 const ready: SharedChatResolution = {
@@ -8,7 +10,7 @@ const ready: SharedChatResolution = {
   settings: {
     apiBaseUrl: "https://chat.example.test",
     widgetUrl: "https://chat.example.test/embed/pw-chat.js",
-    widgetIntegrity: null,
+    widgetIntegrity: "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
   },
 };
 
@@ -19,17 +21,29 @@ async function freshSharedChat() {
   return (await import("./SharedChat")).SharedChat;
 }
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  document.body.innerHTML = "";
-});
-
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
 });
 
 describe("SharedChat", () => {
+  it("stays off for the published Silver configuration", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js");
+    vi.stubEnv(
+      "NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY",
+      "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
+    );
+    const SharedChat = await freshSharedChat();
+
+    const { container } = render(<SharedChat />);
+
+    expect(container.innerHTML).toBe("");
+    expect(widgetScripts()).toHaveLength(0);
+    expect(document.getElementById("pwi-chat-config")).toBeNull();
+    expect(screen.queryByRole("heading", { name: sharedChatDisclosure.title })).toBeNull();
+  });
+
   it("is off by default: renders nothing and loads no script", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", undefined);
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://chat.example.test");
@@ -37,7 +51,6 @@ describe("SharedChat", () => {
     const SharedChat = await freshSharedChat();
 
     const { container } = render(<SharedChat />);
-    await act(() => vi.runAllTimersAsync());
 
     expect(container.innerHTML).toBe("");
     expect(widgetScripts()).toHaveLength(0);
@@ -48,43 +61,64 @@ describe("SharedChat", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const SharedChat = await freshSharedChat();
     render(<SharedChat resolution={{ status: "invalid", problems: ["insecure"] }} />);
-    await act(() => vi.runAllTimersAsync());
     expect(widgetScripts()).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: sharedChatDisclosure.openLabel })).toBeNull();
   });
 
-  it("defers loading until the browser is idle", async () => {
+  it("shows the Primewayz Infotech disclosure and the privacy-policy link without loading chat", async () => {
+    const SharedChat = await freshSharedChat();
+    render(<SharedChat resolution={ready} />);
+
+    const notice = screen.getByRole("region", { name: sharedChatDisclosure.title });
+    expect(notice.textContent).toContain("powered by Primewayz Infotech");
+    expect(notice.textContent).not.toMatch(/Primewayz UK/);
+    expect(notice.textContent).not.toMatch(/\d+\s+days/);
+    for (const paragraph of sharedChatDisclosure.paragraphs) {
+      expect(notice.textContent).toContain(paragraph);
+    }
+    const privacy = screen.getByRole("link", { name: sharedChatDisclosure.privacyLabel });
+    expect(privacy.getAttribute("href")).toBe(links.privacy.href);
+    expect(privacy.getAttribute("href")).toContain("/privacy-policy");
+    expect(widgetScripts()).toHaveLength(0);
+    expect(document.getElementById("pwi-chat-config")).toBeNull();
+    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
+  });
+
+  it("loads the published widget only after the visitor opens chat", async () => {
     const SharedChat = await freshSharedChat();
     render(<SharedChat resolution={ready} />);
     expect(widgetScripts()).toHaveLength(0);
-    await act(() => vi.runAllTimersAsync());
+
+    const button = screen.getByRole("button", { name: sharedChatDisclosure.openLabel });
+    await act(async () => {
+      button.click();
+      await Promise.resolve();
+    });
+
+    const script = widgetScripts()[0] as HTMLScriptElement;
+    expect(script.src).toBe(ready.settings.widgetUrl);
+    expect(script.integrity).toBe(ready.settings.widgetIntegrity);
+    expect(script.crossOrigin).toBe("anonymous");
     expect(widgetScripts()).toHaveLength(1);
+
+    button.click();
+    expect(widgetScripts()).toHaveLength(1);
+
+    await act(async () => {
+      script.dispatchEvent(new Event("error"));
+    });
+    expect(screen.getByRole("status").textContent).toBe(sharedChatDisclosure.unavailable);
+    expect(document.getElementById("pwi-chat-config")).toBeNull();
   });
 
-  it("mounts the widget once under Strict Mode double effects and remounts", async () => {
+  it("mounts one disclosure under Strict Mode and still waits for a click", async () => {
     const SharedChat = await freshSharedChat();
-    const view = render(
-      <StrictMode>
-        <SharedChat resolution={ready} />
-      </StrictMode>,
-    );
-    await act(() => vi.runAllTimersAsync());
-    view.unmount();
     render(
       <StrictMode>
         <SharedChat resolution={ready} />
       </StrictMode>,
     );
-    await act(() => vi.runAllTimersAsync());
-
-    expect(widgetScripts()).toHaveLength(1);
-    expect(document.querySelectorAll("#pwi-chat-config")).toHaveLength(1);
-  });
-
-  it("does not start if unmounted before the idle callback fires", async () => {
-    const SharedChat = await freshSharedChat();
-    const view = render(<SharedChat resolution={ready} />);
-    view.unmount();
-    await act(() => vi.runAllTimersAsync());
+    expect(screen.getAllByRole("button", { name: sharedChatDisclosure.openLabel })).toHaveLength(1);
     expect(widgetScripts()).toHaveLength(0);
   });
 });
