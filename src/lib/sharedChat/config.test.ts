@@ -14,9 +14,9 @@ const valid: SharedChatEnv = {
   widgetUrl: "https://chat.example.test/embed/pw-chat.js",
 };
 
-/** Public values for the Silver tenant. Enablement stays off until activation is approved. */
+/** Public values for the Silver tenant after Origin activation. */
 const publishedSilver: SharedChatEnv = {
-  enabled: "off",
+  enabled: "on",
   apiBaseUrl: "https://uk.primewayz.com",
   widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
   widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
@@ -99,18 +99,20 @@ describe("resolveSharedChatSettings", () => {
     expect(resolveSharedChatSettings({ ...valid, widgetIntegrity: "md5-abc" }, true).status).toBe("invalid");
   });
 
-  it("keeps the published Silver configuration off", () => {
-    expect(resolveSharedChatSettings(publishedSilver, true)).toEqual({ status: "disabled" });
-  });
-
-  it("accepts the published Silver URLs and integrity only when explicitly enabled", () => {
-    expect(resolveSharedChatSettings({ ...publishedSilver, enabled: "on" }, true)).toEqual({
+  it("accepts the published Silver URLs, integrity and enablement", () => {
+    expect(resolveSharedChatSettings(publishedSilver, true)).toEqual({
       status: "ready",
       settings: {
         apiBaseUrl: "https://uk.primewayz.com",
         widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
         widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
       },
+    });
+  });
+
+  it("can still disable the published Silver URLs without removing them", () => {
+    expect(resolveSharedChatSettings({ ...publishedSilver, enabled: "off" }, true)).toEqual({
+      status: "disabled",
     });
   });
 });

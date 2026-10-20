@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("SharedChat", () => {
-  it("stays off for the published Silver configuration", async () => {
+  it("stays off when the published Silver URLs are present but enablement is off", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js");
