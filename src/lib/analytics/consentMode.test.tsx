@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TagManager, gtmLoaderSource } from "@/lib/analytics/TagManager";
+import { TagManager, gtmLoaderSource, loadGtmContainer } from "@/lib/analytics/TagManager";
 import { ConsentModeSync } from "@/lib/analytics/ConsentModeSync";
 import {
   CONSENT_SIGNALS,
@@ -71,6 +71,7 @@ function resetRuntime() {
   delete window.gtag;
   delete window.__rrbConsentDefaultSet;
   delete window.__rrbConsentApplied;
+  delete window.__rrbGtmLoaded;
 }
 
 function command(entry: unknown) {
@@ -134,10 +135,11 @@ afterEach(() => {
   Reflect.deleteProperty(document, "cookie");
   document.querySelectorAll('script[src*="googletagmanager"]').forEach((node) => node.remove());
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("consent bootstrap ordering", () => {
-  it("sets every consent type to denied before a future GTM loader can run", () => {
+  it("sets every consent type to denied and does not request gtm.js until both grants exist", () => {
     runConsentBootstrap();
 
     expect(window.__rrbConsentDefaultSet).toBe(true);
@@ -149,21 +151,37 @@ describe("consent bootstrap ordering", () => {
     expect(signals().at(-1)).not.toHaveProperty("event");
 
     const loader = gtmLoaderSource("GTM-TEST1");
-    expect(loader).toContain("if(!w.__rrbConsentDefaultSet)return");
-    const anchor = document.createElement("script");
-    document.head.appendChild(anchor);
+    expect(loader).toContain("if(!w.__rrbConsentDefaultSet||w.__rrbGtmLoaded)return");
+    expect(loader).toContain('__rrbConsentApplied!=="granted|granted|granted|granted"');
     new Function(loader)();
-    anchor.remove();
+    expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
+    expect(window.__rrbGtmLoaded).toBeUndefined();
+
+    for (const preferences of [
+      { analytics: "granted", advertising: "denied" },
+      { analytics: "denied", advertising: "granted" },
+      { analytics: "denied", advertising: "denied" },
+    ] as const) {
+      applyOpenPageConsent(preferences);
+      new Function(loader)();
+      expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
+    }
+
+    applyOpenPageConsent({ analytics: "granted", advertising: "granted" });
+    new Function(loader)();
+    new Function(loader)();
     const gtmStart = (window.dataLayer ?? []).findIndex(
       (entry) => !!entry && typeof entry === "object" && (entry as { event?: unknown }).event === "gtm.js",
     );
     expect(gtmStart).toBeGreaterThan(0);
     expect(commands()[0]?.action).toBe("default");
-    expect(document.querySelector('script[src*="googletagmanager.com/gtm.js?id=GTM-TEST1"]')).not.toBeNull();
+    expect(document.querySelectorAll('script[src*="googletagmanager.com/gtm.js?id=GTM-TEST1"]')).toHaveLength(1);
   });
 
   it("does not inject gtm.js when the consent default has not run", () => {
+    window.__rrbConsentApplied = "granted|granted|granted|granted";
     new Function(gtmLoaderSource("GTM-TEST1"))();
+    loadGtmContainer("not-a-container");
     expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
     expect(window.dataLayer ?? []).toEqual([]);
   });
@@ -186,6 +204,55 @@ describe("consent bootstrap ordering", () => {
     runConsentBootstrap();
     runConsentBootstrap();
     expect(commands().filter((entry) => entry?.action === "default")).toHaveLength(1);
+  });
+
+  it("loads the configured container only after both categories are granted, including a later change", async () => {
+    vi.stubEnv("NEXT_PUBLIC_GTM_ID", "GTM-MRLNJ7Q");
+    vi.resetModules();
+    const { TagManager } = await import("./TagManager");
+    const { ConsentModeSync } = await import("./ConsentModeSync");
+    const { writeStoredConsent: writeChoice } = await import("@/lib/consent");
+    render(
+      <>
+        <ConsentModeSync />
+        <TagManager />
+      </>,
+    );
+    await waitFor(() => expect(window.__rrbConsentDefaultSet).toBe(true));
+    expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
+
+    writeChoice({ analytics: "granted", advertising: "denied" }, NOW);
+    writeChoice({ analytics: "denied", advertising: "granted" }, NOW + 1);
+    expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
+
+    writeChoice({ analytics: "granted", advertising: "granted" }, NOW + 2);
+    await waitFor(() =>
+      expect(document.querySelector('script[src*="googletagmanager.com/gtm.js?id=GTM-MRLNJ7Q"]')).not.toBeNull(),
+    );
+    expect(document.querySelectorAll('script[src*="googletagmanager"]')).toHaveLength(1);
+
+    writeChoice({ analytics: "denied", advertising: "denied" }, NOW + 3);
+    expect(document.querySelectorAll('script[src*="googletagmanager"]')).toHaveLength(1);
+    expect(commands().at(-1)?.state).toEqual(DENIED_GOOGLE_CONSENT);
+  });
+
+  it("loads a saved accept-all choice without waiting for another click", async () => {
+    installCookieJar().set(CONSENT_COOKIE_NAME, payload("granted", "granted"));
+    vi.stubEnv("NEXT_PUBLIC_GTM_ID", "GTM-MRLNJ7Q");
+    vi.resetModules();
+    const { TagManager } = await import("./TagManager");
+    const { ConsentModeSync } = await import("./ConsentModeSync");
+    render(
+      <>
+        <ConsentModeSync />
+        <TagManager />
+      </>,
+    );
+    await waitFor(() =>
+      expect(document.querySelector('script[src*="googletagmanager.com/gtm.js?id=GTM-MRLNJ7Q"]')).not.toBeNull(),
+    );
+    expect(commands()[0]?.action).toBe("default");
+    expect(commands().some((entry) => entry?.action === "update")).toBe(true);
   });
 });
 

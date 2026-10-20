@@ -44,3 +44,10 @@ next-env.d.ts
 # generated visual, Lighthouse and accessibility audits
 /audit-baseline/
 /audit-phase-*/
+
+# local shared-chat widget artifacts used by integration tests
+/embed-releases/
+
+# local Ubuntu-stage evidence packs (never cut over from here)
+/release-staging/
+

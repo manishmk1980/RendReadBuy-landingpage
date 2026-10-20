@@ -1,7 +1,7 @@
 /**
- * Runs the verified shared widget 1.1.0 (`pw-chat.js`) against a stubbed fetch,
+ * Runs the verified shared widget 1.3.0 (`pw-chat.js`) against a stubbed fetch,
  * so no request leaves the machine. Point SHARED_CHAT_WIDGET_ARTIFACT at
- * `embed-releases/chat/1.1.0/pw-chat.js`; otherwise this file is skipped.
+ * `embed-releases/chat/1.3.0/pw-chat.js`; otherwise this file is skipped.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { createElement } from "react";
@@ -162,13 +162,21 @@ function visitorFacingText(shadow: ShadowRoot) {
 
 const chatApi = () => (window as unknown as { PrimewayzChat: { open: () => void; close: () => void; version: string } }).PrimewayzChat;
 
+const pendingTimers: unknown[] = [];
+const nativeSetTimeout = window.setTimeout.bind(window);
+
 beforeEach(() => {
   calls = [];
   shadowRoots = [];
   document.body.innerHTML = "<main><a href='https://rentreadbuy.com/subscription-plans'>Start Silver Membership</a></main>";
   setViewport(1280, 800);
   window.scrollTo = () => {};
-  if (window.location.pathname !== "/") window.history.replaceState({}, "", "/");
+  window.history.replaceState(null, "", `${window.location.origin}/`);
+  vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+    const id = nativeSetTimeout(handler, timeout, ...args);
+    pendingTimers.push(id);
+    return id as unknown as ReturnType<typeof setTimeout>;
+  });
   localStorage.clear();
   sessionStorage.clear();
   delete (window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled;
@@ -183,7 +191,11 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  for (const id of pendingTimers) clearTimeout(id as ReturnType<typeof setTimeout>);
+  pendingTimers.length = 0;
+  vi.restoreAllMocks();
   document.body.innerHTML = "";
+  window.history.replaceState(null, "", `${window.location.origin}/`);
 });
 
 describe.skipIf(!artifact)("real shared widget artifact", () => {
@@ -236,10 +248,11 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
       "How do returns and my next book work?",
       "Can I gift Silver Membership?",
       "How do I join?",
+      "Something else",
     ]);
     expect(shadow.textContent).toContain("Questions about Silver Membership?");
-    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.1.0");
-    expect(chatApi().version).toBe("1.1.0");
+    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.3.0");
+    expect(chatApi().version).toBe("1.3.0");
     expect(shadow.querySelector(".pw-chat-title")?.textContent).toBe("RentReadBuy Reading Assistant");
     const root = shadow.querySelector(".pw-chat-root") as HTMLElement;
     expect(root.style.getPropertyValue("--pw-chat-launcher-bg")).toBe("#037b80");
@@ -270,6 +283,38 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
 
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(localStorage.getItem("primewayz_chat_session_id")).toBeNull();
+  });
+
+  it("opens the central widget for ?pw_chat=open and keeps the membership link and UTMs", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?pw_chat=open&utm_source=qa_f2b&utm_medium=test&utm_campaign=silver_launch_qa",
+    );
+    stubFetch(healthy);
+    vi.resetModules();
+    const { ChatSupportButton } = await import("./ChatSupportButton");
+    const observer = executeWidgetOnInsert();
+    render(createElement(ChatSupportButton, { settings }));
+
+    await waitFor(() => Boolean(widgetHost()), "widget host");
+    await waitFor(() => shadowRoots[0]?.querySelector(".pw-chat-panel")?.hasAttribute("hidden") === false, "open panel");
+    await waitFor(() => calls.some((call) => call.path === "/api/chat/heartbeat"), "heartbeat");
+    observer.disconnect();
+
+    expect(document.querySelectorAll("#pw-chat-root")).toHaveLength(1);
+    expect(chatApi().version).toBe("1.3.0");
+    expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(window.location.search).toContain("utm_source=qa_f2b");
+    expect(window.location.search).toContain("utm_campaign=silver_launch_qa");
+    const heartbeat = calls.find((call) => call.path === "/api/chat/heartbeat")?.body;
+    expect(heartbeat).toMatchObject({
+      utmSource: "qa_f2b",
+      utmMedium: "test",
+      utmCampaign: "silver_launch_qa",
+    });
+    expect(document.querySelector("a")?.getAttribute("href")).toBe("https://rentreadbuy.com/subscription-plans");
+    expect(visitorFacingText(shadowRoots[0])).not.toMatch(/primewayz uk/i);
   });
 
   it("does not create a chat session merely because the page loaded", async () => {
