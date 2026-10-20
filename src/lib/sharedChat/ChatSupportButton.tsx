@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { sharedChatDisclosure } from "@/config/sharedChat";
-import type { SharedChatSettings } from "./config";
+import { sharedChatOpenRequested, type SharedChatSettings } from "./config";
 import { loadSharedChatWidget } from "./loadWidget";
 import styles from "./ChatPrivacyNotice.module.css";
 
@@ -30,32 +30,56 @@ async function waitForHost(win: ChatWindow) {
 }
 
 /**
- * Loads the existing shared widget on the visitor's action. The widget script,
- * its API calls and its session storage stay untouched until this runs.
- * `__PRIMEWAYZ_ANALYTICS_CONSENT__` is left unset, so the widget does not
- * forward chat events into the page's analytics.
+ * Loads the existing shared widget on the visitor's action, or when the page
+ * URL asks the central widget to open (`?pw_chat=open`). The widget script,
+ * its API calls and its session storage stay untouched until one of those
+ * happens. `__PRIMEWAYZ_ANALYTICS_CONSENT__` is left unset, so the widget does
+ * not forward chat events into the page's analytics.
+ *
+ * A failed script or a widget that never boots only changes this notice.
+ * It does not throw, and it does not block the membership links.
  */
 export function ChatSupportButton({ settings }: { settings: SharedChatSettings }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const copy = sharedChatDisclosure;
 
-  async function openChat() {
-    if (phase === "opening") return;
-    setPhase("opening");
-    const win = window as ChatWindow;
-    const result = await loadSharedChatWidget(win, settings);
-    if (result === "script_failed" || result === "config_conflict") {
+  const openChat = useCallback(async () => {
+    let skipped = false;
+    setPhase((current) => {
+      if (current === "opening" || current === "ready") {
+        skipped = true;
+        return current;
+      }
+      return "opening";
+    });
+    if (skipped) return;
+
+    try {
+      const win = window as ChatWindow;
+      const result = await loadSharedChatWidget(win, settings);
+      if (result === "script_failed" || result === "config_conflict") {
+        setPhase("unavailable");
+        return;
+      }
+      const ready = await waitForHost(win);
+      if (!ready) {
+        setPhase("unavailable");
+        return;
+      }
+      chatApi(win)?.open?.();
+      setPhase("ready");
+    } catch {
       setPhase("unavailable");
-      return;
     }
-    const ready = await waitForHost(win);
-    if (!ready) {
-      setPhase("unavailable");
-      return;
-    }
-    chatApi(win)?.open?.();
-    setPhase("ready");
-  }
+  }, [settings]);
+
+  useEffect(() => {
+    if (!sharedChatOpenRequested(window.location.search)) return;
+    const timer = window.setTimeout(() => {
+      void openChat();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [openChat]);
 
   return (
     <div className={styles.action}>

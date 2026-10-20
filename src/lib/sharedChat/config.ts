@@ -28,7 +28,7 @@ export type SharedChatResolution =
   | { status: "invalid"; problems: string[] }
   | { status: "ready"; settings: SharedChatSettings };
 
-/** The `pwi-chat-config` JSON accepted by the shared widget (1.1.0). */
+/** The `pwi-chat-config` JSON accepted by the shared widget (1.3.0). */
 export interface SharedChatEmbedConfig {
   apiBaseUrl: string;
   siteKey: string;
@@ -103,6 +103,20 @@ export function resolveSharedChatSettings(
 }
 
 export const sharedChat = resolveSharedChatSettings(sharedChatEnv);
+
+/**
+ * The published widget opens itself when `pw_chat=open` is on the page URL at
+ * the moment its script runs. The value must be exactly `open`.
+ */
+export function sharedChatOpenRequested(search: string): boolean {
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  if (!raw) return false;
+  try {
+    return new URLSearchParams(raw).get("pw_chat") === "open";
+  } catch {
+    return false;
+  }
+}
 
 /** Page URL without query or fragment: the widget only matches on the path. */
 export function buildSharedChatEmbedConfig(

@@ -4,6 +4,7 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     __rrbConsentDefaultSet?: boolean;
     __rrbConsentApplied?: string;
+    __rrbGtmLoaded?: boolean;
   }
 }
 

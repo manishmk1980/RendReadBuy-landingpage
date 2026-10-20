@@ -81,8 +81,8 @@ describe("loadSharedChatWidget", () => {
     const { loadSharedChatWidget } = await freshLoader();
     const published = {
       apiBaseUrl: "https://uk.primewayz.com",
-      widgetUrl: "https://uk.primewayz.com/embed/chat/1.1.0/pw-chat.js",
-      widgetIntegrity: "sha384-NoTM6nKvWU6U4TPvQ2rbNTuxv6aP4fj8BWZBSG5XIDPPuz9IhKp1EjwJ3BNOo4XO",
+      widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
+      widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
     };
     void loadSharedChatWidget(window, published);
     const script = widgetScripts()[0] as HTMLScriptElement;

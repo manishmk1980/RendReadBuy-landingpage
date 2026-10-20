@@ -44,3 +44,6 @@ next-env.d.ts
 # generated visual, Lighthouse and accessibility audits
 /audit-baseline/
 /audit-phase-*/
+
+# local shared-chat widget artifacts used by integration tests
+/embed-releases/

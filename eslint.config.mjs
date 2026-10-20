@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local widget artifact used only by SHARED_CHAT_WIDGET_ARTIFACT tests.
+    "embed-releases/**",
   ]),
 ]);
 
