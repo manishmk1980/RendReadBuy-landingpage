@@ -7,7 +7,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { createElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sharedChatDisclosure } from "@/config/sharedChat";
 import type { SharedChatSettings } from "./config";
 
 const artifactPath = process.env.SHARED_CHAT_WIDGET_ARTIFACT;
@@ -199,33 +198,32 @@ afterEach(() => {
 });
 
 describe.skipIf(!artifact)("real shared widget artifact", () => {
-  it("loads the widget, calls the API and writes session storage only after Open chat support", async () => {
+  it("loads the widget automatically on mount and only writes session storage after open", async () => {
     stubFetch(healthy);
     vi.resetModules();
-    const { ChatSupportButton } = await import("./ChatSupportButton");
+    const { SharedChat } = await import("./SharedChat");
     const observer = executeWidgetOnInsert();
-    render(createElement(ChatSupportButton, { settings }));
+    render(createElement(SharedChat, { resolution: { status: "ready", settings } }));
 
-    expect(calls).toHaveLength(0);
-    expect(document.querySelector('script[data-rrb-shared-chat="widget"]')).toBeNull();
+    await waitFor(() => Boolean(widgetHost()), "widget host");
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toBeNull();
     expect(sessionStorage.getItem("rrb_silver_chat_panel_open")).toBeNull();
     expect(sessionStorage.getItem("rrb_silver_chat_first_landing")).toBeNull();
-
-    screen.getByRole("button", { name: sharedChatDisclosure.openLabel }).click();
-    await waitFor(() => Boolean(widgetHost()), "widget host");
-    await waitFor(() => Boolean(localStorage.getItem("rrb_silver_chat_session_id")), "session id");
-    observer.disconnect();
-
     expect(calls.slice(0, 2).map((call) => call.path)).toEqual([
       "/api/platform/capabilities",
       "/api/chat/availability",
     ]);
+    expect(document.querySelectorAll("#pw-chat-root")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
+
+    chatApi().open();
+    await waitFor(() => Boolean(localStorage.getItem("rrb_silver_chat_session_id")), "session id");
+    observer.disconnect();
+
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(localStorage.getItem("primewayz_chat_session_id")).toBeNull();
     expect(visitorFacingText(shadowRoots[0])).not.toMatch(/primewayz uk/i);
     expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
-    expect(document.querySelectorAll("#pw-chat-root")).toHaveLength(1);
   });
 
   it("boots from the campaign config with tenant-specific storage and no server-owned identity", async () => {
@@ -293,9 +291,9 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     );
     stubFetch(healthy);
     vi.resetModules();
-    const { ChatSupportButton } = await import("./ChatSupportButton");
+    const { SharedChat } = await import("./SharedChat");
     const observer = executeWidgetOnInsert();
-    render(createElement(ChatSupportButton, { settings }));
+    render(createElement(SharedChat, { resolution: { status: "ready", settings } }));
 
     await waitFor(() => Boolean(widgetHost()), "widget host");
     await waitFor(() => shadowRoots[0]?.querySelector(".pw-chat-panel")?.hasAttribute("hidden") === false, "open panel");
