@@ -262,6 +262,7 @@ describe("Phase 1 consent", () => {
     expect(banner?.textContent).toContain("Both stay off until you choose");
     expect(banner?.textContent).not.toMatch(/180/);
     expect(screen.queryByText(campaignCopy.consent.preferencesDisclaimer)).toBeNull();
+    expect(screen.queryByText(/powered by Primewayz Infotech/)).toBeNull();
     expect(JSON.stringify(campaignCopy.consent)).not.toMatch(/180/);
     expect(campaignCopy.consent.dialogBody).toContain("Both stay off unless you allow them");
     expect(campaignCopy.consent.dialogBody).toContain("Checked categories are saved only when you choose Save preferences");
@@ -321,6 +322,13 @@ describe("Phase 1 consent", () => {
     expect(controls.analytics.checked).toBe(true);
     expect(controls.advertising.checked).toBe(true);
     expect(screen.getByText(campaignCopy.consent.preferencesDisclaimer)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Chat support is powered by Primewayz Infotech. Messages and contact details shared may be processed to respond to your enquiry.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toContain("/privacy-policy");
+    expect(screen.getByRole("dialog").textContent).toContain("Do not share passwords or payment details");
     expect(readStoredConsent()).toBeNull();
     expect(writes).toEqual([]);
     expect(consentCommands().some((entry) => entry.action === "update")).toBe(false);
@@ -445,8 +453,12 @@ describe("Phase 1 consent", () => {
     expect(switches().analytics.checked).toBe(true);
     expect(switches().advertising.checked).toBe(true);
     expect(screen.getByRole("dialog").textContent).toContain(campaignCopy.consent.preferencesDisclaimer);
+    expect(screen.getByRole("dialog").textContent).toContain("powered by Primewayz Infotech");
+    expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toContain("/privacy-policy");
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
     const rootSource = readFileSync(path.join("src", "components", "campaign", "Consent", "ConsentRoot.tsx"), "utf8");
     expect(rootSource).toContain("copy.preferencesDisclaimer");
+    expect(rootSource).toContain("sharedChatDisclosure");
     expect(rootSource).not.toContain("We use analytics and advertising technologies");
     const css = readFileSync(path.join("src", "components", "campaign", "Consent", "Consent.module.css"), "utf8");
     expect(css).toMatch(/\.preferenceHint\s*\{[^}]*font-size:\s*0\.75rem/);

@@ -1,5 +1,5 @@
 import { sharedChat, type SharedChatResolution } from "./config";
-import { ChatPrivacyNotice } from "./ChatPrivacyNotice";
+import { SharedChatInitializer } from "./SharedChatInitializer";
 
 if (sharedChat.status === "invalid") {
   console.warn(`Shared chat is enabled but misconfigured, so it stays off:\n${sharedChat.problems.join("\n")}`);
@@ -8,11 +8,11 @@ if (sharedChat.status === "invalid") {
 /**
  * Shared Primewayz Infotech visitor chat. Off by default
  * (`NEXT_PUBLIC_SHARED_CHAT_ENABLED`). When off or misconfigured nothing is
- * rendered, so no disclosure, widget script or chat request is produced.
- * When ready, the notice is visible and the widget loads only after the
- * visitor opens chat.
+ * rendered and no widget script is loaded. When ready, a client initializer
+ * mounts once and loads the floating launcher automatically; the panel stays
+ * closed unless `?pw_chat=open` is on the URL.
  */
 export function SharedChat({ resolution = sharedChat }: { resolution?: SharedChatResolution }) {
   if (resolution.status !== "ready") return null;
-  return <ChatPrivacyNotice settings={resolution.settings} />;
+  return <SharedChatInitializer settings={resolution.settings} />;
 }

@@ -1,8 +1,6 @@
 import { StrictMode } from "react";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sharedChatDisclosure } from "@/config/sharedChat";
-import { links } from "@/config/links";
 import type { SharedChatResolution } from "./config";
 
 const ready: SharedChatResolution = {
@@ -21,11 +19,20 @@ async function freshSharedChat() {
   return (await import("./SharedChat")).SharedChat;
 }
 
+const nativeAppendChild = Document.prototype.appendChild;
+
 afterEach(() => {
   cleanup();
+  Object.defineProperty(document.body, "appendChild", {
+    configurable: true,
+    writable: true,
+    value: nativeAppendChild.bind(document.body),
+  });
   document.getElementById("pwi-chat-config")?.remove();
+  document.getElementById("pw-chat-root")?.remove();
   document.querySelectorAll('script[data-rrb-shared-chat="widget"]').forEach((node) => node.remove());
   delete (window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled;
+  delete (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat;
   window.history.replaceState({}, "", "/");
 });
 
@@ -45,7 +52,7 @@ describe("SharedChat", () => {
     expect(container.innerHTML).toBe("");
     expect(widgetScripts()).toHaveLength(0);
     expect(document.getElementById("pwi-chat-config")).toBeNull();
-    expect(screen.queryByRole("heading", { name: sharedChatDisclosure.title })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
   });
 
   it("is off by default: renders nothing and loads no script", async () => {
@@ -66,57 +73,59 @@ describe("SharedChat", () => {
     const SharedChat = await freshSharedChat();
     render(<SharedChat resolution={{ status: "invalid", problems: ["insecure"] }} />);
     expect(widgetScripts()).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: sharedChatDisclosure.openLabel })).toBeNull();
   });
 
-  it("shows the Primewayz Infotech disclosure and the privacy-policy link without loading chat", async () => {
+  it("loads the published widget automatically on mount without a page button", async () => {
     const SharedChat = await freshSharedChat();
     render(<SharedChat resolution={ready} />);
 
-    const notice = screen.getByRole("region", { name: sharedChatDisclosure.title });
-    expect(notice.textContent).toContain("powered by Primewayz Infotech");
-    expect(notice.textContent).not.toMatch(/Primewayz UK/);
-    expect(notice.textContent).not.toMatch(/\d+\s+days/);
-    for (const paragraph of sharedChatDisclosure.paragraphs) {
-      expect(notice.textContent).toContain(paragraph);
-    }
-    const privacy = screen.getByRole("link", { name: sharedChatDisclosure.privacyLabel });
-    expect(privacy.getAttribute("href")).toBe(links.privacy.href);
-    expect(privacy.getAttribute("href")).toContain("/privacy-policy");
-    expect(widgetScripts()).toHaveLength(0);
-    expect(document.getElementById("pwi-chat-config")).toBeNull();
-    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
-  });
-
-  it("loads the published widget only after the visitor opens chat", async () => {
-    const SharedChat = await freshSharedChat();
-    render(<SharedChat resolution={ready} />);
-    expect(widgetScripts()).toHaveLength(0);
-
-    const button = screen.getByRole("button", { name: sharedChatDisclosure.openLabel });
-    await act(async () => {
-      button.click();
-      await Promise.resolve();
-    });
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
 
     const script = widgetScripts()[0] as HTMLScriptElement;
     expect(script.src).toBe(ready.settings.widgetUrl);
     expect(script.integrity).toBe(ready.settings.widgetIntegrity);
     expect(script.crossOrigin).toBe("anonymous");
-    expect(widgetScripts()).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /open chat/i })).toBeNull();
+    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
+  });
 
-    button.click();
-    expect(widgetScripts()).toHaveLength(1);
+  it("does not call PrimewayzChat.open on a normal load", async () => {
+    const open = vi.fn();
+    (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat = { open };
+    const SharedChat = await freshSharedChat();
+    render(<SharedChat resolution={ready} />);
 
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
     await act(async () => {
-      script.dispatchEvent(new Event("error"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(screen.getByRole("status").textContent).toBe(sharedChatDisclosure.unavailable);
-    expect(document.getElementById("pwi-chat-config")).toBeNull();
+
+    expect(open).not.toHaveBeenCalled();
+    delete (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat;
   });
 
   it("loads the central widget for ?pw_chat=open and leaves the landing query in place", async () => {
     window.history.replaceState({}, "", "/?pw_chat=open&utm_source=qa_f2b&utm_medium=test&utm_campaign=silver_launch_qa");
+    const open = vi.fn();
+    Object.defineProperty(document.body, "appendChild", {
+      configurable: true,
+      value: new Proxy(document.body.appendChild.bind(document.body), {
+        apply(target, thisArg, args: [Node]) {
+          const node = args[0];
+          const result = Reflect.apply(target, thisArg, args) as Node;
+          if (node instanceof HTMLScriptElement && node.dataset.rrbSharedChat === "widget") {
+            const root = document.createElement("div");
+            root.id = "pw-chat-root";
+            document.body.appendChild(root);
+            (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat = { open };
+            queueMicrotask(() => node.dispatchEvent(new Event("load")));
+          }
+          return result;
+        },
+      }),
+    });
+
     const SharedChat = await freshSharedChat();
     render(
       <>
@@ -126,6 +135,7 @@ describe("SharedChat", () => {
     );
 
     await waitFor(() => expect(widgetScripts()).toHaveLength(1));
+    await waitFor(() => expect(open).toHaveBeenCalled());
 
     const script = widgetScripts()[0] as HTMLScriptElement;
     expect(script.src).toBe(ready.settings.widgetUrl);
@@ -139,20 +149,22 @@ describe("SharedChat", () => {
     expect(screen.getByRole("link", { name: "Start Silver Membership" }).getAttribute("href")).toBe(
       "https://rentreadbuy.com/subscription-plans",
     );
-    expect(screen.getByRole("region", { name: sharedChatDisclosure.title }).textContent).toContain(
-      "powered by Primewayz Infotech",
-    );
+    delete (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat;
   });
 
-  it("does not load chat for any other pw_chat value", async () => {
+  it("does not open chat for any other pw_chat value", async () => {
     window.history.replaceState({}, "", "/?pw_chat=closed&utm_source=qa_f2b");
+    const open = vi.fn();
+    (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat = { open };
     const SharedChat = await freshSharedChat();
     render(<SharedChat resolution={ready} />);
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(widgetScripts()).toHaveLength(0);
+    expect(open).not.toHaveBeenCalled();
     expect(window.location.search).toContain("utm_source=qa_f2b");
+    delete (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat;
   });
 
   it("keeps the membership link when the widget script fails", async () => {
@@ -169,21 +181,20 @@ describe("SharedChat", () => {
     await act(async () => {
       script.dispatchEvent(new Event("error"));
     });
-    expect(screen.getByRole("status").textContent).toBe(sharedChatDisclosure.unavailable);
     expect(screen.getByRole("link", { name: "Start Silver Membership" }).getAttribute("href")).toBe(
       "https://rentreadbuy.com/subscription-plans",
     );
     expect(document.getElementById("pwi-chat-config")).toBeNull();
   });
 
-  it("mounts one disclosure under Strict Mode and still waits for a click", async () => {
+  it("mounts one initializer under Strict Mode and loads the widget once", async () => {
     const SharedChat = await freshSharedChat();
     render(
       <StrictMode>
         <SharedChat resolution={ready} />
       </StrictMode>,
     );
-    expect(screen.getAllByRole("button", { name: sharedChatDisclosure.openLabel })).toHaveLength(1);
-    expect(widgetScripts()).toHaveLength(0);
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
   });
 });
