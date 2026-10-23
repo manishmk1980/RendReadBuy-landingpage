@@ -18,8 +18,8 @@ const valid: SharedChatEnv = {
 const publishedSilver: SharedChatEnv = {
   enabled: "on",
   apiBaseUrl: "https://uk.primewayz.com",
-  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
-  widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+  widgetIntegrity: "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
 };
 
 const settings: SharedChatSettings = {
@@ -28,7 +28,7 @@ const settings: SharedChatSettings = {
   widgetIntegrity: null,
 };
 
-/** Constraints the shared widget (1.3.0) applies before accepting a field. */
+/** Constraints the shared widget (1.3.3) applies before accepting a field. */
 const WIDGET_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const WIDGET_STORAGE_KEY_PATTERN = /^[A-Za-z0-9_.:-]{1,100}$/;
 const WIDGET_DEFAULT_STORAGE_PREFIX = "primewayz_chat_";
@@ -83,8 +83,8 @@ describe("resolveSharedChatSettings", () => {
   });
 
   it("accepts a same-origin path for a self-hosted widget copy", () => {
-    const result = resolveSharedChatSettings({ ...valid, widgetUrl: "/vendor/pw-chat.js?v=1.3.0" }, true);
-    expect(result.status === "ready" && result.settings.widgetUrl).toBe("/vendor/pw-chat.js?v=1.3.0");
+    const result = resolveSharedChatSettings({ ...valid, widgetUrl: "/vendor/pw-chat.js?v=1.3.3" }, true);
+    expect(result.status === "ready" && result.settings.widgetUrl).toBe("/vendor/pw-chat.js?v=1.3.3");
   });
 
   it("allows plain http on localhost only outside production", () => {
@@ -104,8 +104,8 @@ describe("resolveSharedChatSettings", () => {
       status: "ready",
       settings: {
         apiBaseUrl: "https://uk.primewayz.com",
-        widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
-        widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+        widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+        widgetIntegrity: "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
       },
     });
   });
@@ -118,7 +118,7 @@ describe("resolveSharedChatSettings", () => {
 });
 
 describe("sharedChatOpenRequested", () => {
-  it("accepts only the exact pw_chat=open query used by widget 1.3.0", () => {
+  it("accepts only the exact pw_chat=open query used by widget 1.3.3", () => {
     expect(sharedChatOpenRequested("?pw_chat=open")).toBe(true);
     expect(sharedChatOpenRequested("pw_chat=open")).toBe(true);
     expect(sharedChatOpenRequested("?utm_source=qa_f2b&utm_medium=test&pw_chat=open")).toBe(true);

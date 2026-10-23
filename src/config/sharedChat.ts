@@ -1,5 +1,5 @@
 /**
- * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.0).
+ * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.3).
  *
  * `siteKey` is a presentation identifier only. The Primewayz backend resolves
  * the tenant from the browser's registered Origin, so no tenant, market or
@@ -59,7 +59,7 @@ export const sharedChatStorageKeys = {
 } as const;
 
 /**
- * Compact cookie-settings disclosure. Widget 1.3.0 has no attribution field:
+ * Compact cookie-settings disclosure. Widget 1.3.3 has no attribution field:
  * panel title, assistant name and team name come from the platform
  * `chatWidget` payload. This copy is the landing-page credit.
  */

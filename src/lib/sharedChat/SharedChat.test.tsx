@@ -33,6 +33,7 @@ afterEach(() => {
   document.querySelectorAll('script[data-rrb-shared-chat="widget"]').forEach((node) => node.remove());
   delete (window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled;
   delete (window as { PrimewayzChat?: { open: () => void } }).PrimewayzChat;
+  delete (window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__;
   window.history.replaceState({}, "", "/");
 });
 
@@ -40,10 +41,10 @@ describe("SharedChat", () => {
   it("stays off when the published Silver URLs are present but enablement is off", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
-    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js");
     vi.stubEnv(
       "NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY",
-      "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+      "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
     );
     const SharedChat = await freshSharedChat();
 
@@ -87,7 +88,7 @@ describe("SharedChat", () => {
     expect(script.crossOrigin).toBe("anonymous");
     expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
     expect(screen.queryByRole("button", { name: /open chat/i })).toBeNull();
-    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
+    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBe(false);
   });
 
   it("does not call PrimewayzChat.open on a normal load", async () => {

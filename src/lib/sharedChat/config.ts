@@ -28,7 +28,7 @@ export type SharedChatResolution =
   | { status: "invalid"; problems: string[] }
   | { status: "ready"; settings: SharedChatSettings };
 
-/** The `pwi-chat-config` JSON accepted by the shared widget (1.3.0). */
+/** The `pwi-chat-config` JSON accepted by the shared widget (1.3.3). */
 export interface SharedChatEmbedConfig {
   apiBaseUrl: string;
   siteKey: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { subscribeSharedChatAnalyticsConsent } from "./analyticsConsent";
 import { sharedChatOpenRequested, type SharedChatSettings } from "./config";
 import { loadSharedChatWidget } from "./loadWidget";
 
@@ -27,8 +28,9 @@ async function waitForHost(win: ChatWindow) {
 /**
  * Loads the shared Primewayz widget once on mount so the floating launcher
  * appears without a separate page button. The panel stays closed unless the
- * URL asks for it (`?pw_chat=open`). `__PRIMEWAYZ_ANALYTICS_CONSENT__` is left
- * unset, so chat stays independent of analytics and advertising preferences.
+ * URL asks for it (`?pw_chat=open`). Analytics consent is mirrored onto
+ * `__PRIMEWAYZ_ANALYTICS_CONSENT__` so the widget only emits GA4/dataLayer
+ * events after an analytics grant on this page.
  *
  * A failed script or a widget that never boots is ignored: the rest of the
  * page, including membership links, must keep working.
@@ -36,6 +38,7 @@ async function waitForHost(win: ChatWindow) {
 export function SharedChatInitializer({ settings }: { settings: SharedChatSettings }) {
   useEffect(() => {
     let cancelled = false;
+    const stopConsentSync = subscribeSharedChatAnalyticsConsent(window);
 
     async function init() {
       try {
@@ -56,6 +59,7 @@ export function SharedChatInitializer({ settings }: { settings: SharedChatSettin
     void init();
     return () => {
       cancelled = true;
+      stopConsentSync();
     };
   }, [settings]);
 

@@ -1,7 +1,7 @@
 /**
- * Runs the verified shared widget 1.3.0 (`pw-chat.js`) against a stubbed fetch,
+ * Runs the verified shared widget 1.3.3 (`pw-chat.js`) against a stubbed fetch,
  * so no request leaves the machine. Point SHARED_CHAT_WIDGET_ARTIFACT at
- * `embed-releases/chat/1.3.0/pw-chat.js`; otherwise this file is skipped.
+ * `embed-releases/chat/1.3.3/pw-chat.js`; otherwise this file is skipped.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { createElement } from "react";
@@ -180,6 +180,7 @@ beforeEach(() => {
   sessionStorage.clear();
   delete (window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled;
   delete (window as { PrimewayzChat?: unknown }).PrimewayzChat;
+  delete (window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__;
   const attachShadow = HTMLElement.prototype.attachShadow;
   vi.spyOn(HTMLElement.prototype, "attachShadow").mockImplementation(function (this: HTMLElement, init) {
     const root = attachShadow.call(this, { ...init, mode: "open" });
@@ -223,7 +224,7 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(localStorage.getItem("primewayz_chat_session_id")).toBeNull();
     expect(visitorFacingText(shadowRoots[0])).not.toMatch(/primewayz uk/i);
-    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBeUndefined();
+    expect((window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__).toBe(false);
   });
 
   it("boots from the campaign config with tenant-specific storage and no server-owned identity", async () => {
@@ -249,8 +250,8 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
       "Something else",
     ]);
     expect(shadow.textContent).toContain("Questions about Silver Membership?");
-    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.3.0");
-    expect(chatApi().version).toBe("1.3.0");
+    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.3.3");
+    expect(chatApi().version).toBe("1.3.3");
     expect(shadow.querySelector(".pw-chat-title")?.textContent).toBe("RentReadBuy Reading Assistant");
     const root = shadow.querySelector(".pw-chat-root") as HTMLElement;
     expect(root.style.getPropertyValue("--pw-chat-launcher-bg")).toBe("#037b80");
@@ -301,7 +302,7 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     observer.disconnect();
 
     expect(document.querySelectorAll("#pw-chat-root")).toHaveLength(1);
-    expect(chatApi().version).toBe("1.3.0");
+    expect(chatApi().version).toBe("1.3.3");
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(window.location.search).toContain("utm_source=qa_f2b");
     expect(window.location.search).toContain("utm_campaign=silver_launch_qa");
@@ -514,5 +515,126 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     expect(widgetHost()).toBeNull();
     expect(document.querySelector("a")?.getAttribute("href")).toBe("https://rentreadbuy.com/subscription-plans");
     expect(window.location.pathname).toBe("/");
+  });
+
+  it.each([
+    {
+      status: "online",
+      tone: "online",
+      color: "#16A34A",
+      launcherCopy: "Team available",
+      headerCopy: "Team available",
+    },
+    {
+      status: "away",
+      tone: "away",
+      color: "#F59E0B",
+      launcherCopy: "Team away",
+      headerCopy: "Team currently away",
+    },
+    {
+      status: "offline",
+      tone: "offline",
+      color: "#94A3B8",
+      launcherCopy: "Team offline",
+      headerCopy: "Team offline",
+    },
+    {
+      status: "assistant",
+      tone: "automated",
+      color: "#0284C7",
+      launcherCopy: "Automated guidance available",
+      headerCopy: "Automated guidance available",
+    },
+  ] as const)(
+    "shows $status presence with matching launcher and header indicators",
+    async ({ status, tone, color, launcherCopy, headerCopy }) => {
+      stubFetch((method, path) => {
+        if (path === "/api/chat/availability") {
+          return {
+            status: 200,
+            body: { status, canAcceptMessages: true, responseExpectation: "" },
+          };
+        }
+        return healthy(method, path);
+      });
+      await loadCampaignWidget();
+      await waitFor(() => Boolean(widgetHost()), "widget host");
+
+      const shadow = shadowRoots[0];
+      const styleText = [...shadow.querySelectorAll("style")].map((node) => node.textContent).join("\n");
+      expect(styleText).toContain(`.pw-chat-tone-${tone} { background: ${color}; }`);
+
+      const launcherDot = shadow.querySelector(".pw-chat-launcher-dot");
+      expect(launcherDot?.className).toContain(`pw-chat-tone-${tone}`);
+      expect(shadow.querySelector(".pw-chat-launcher")?.getAttribute("aria-label")).toContain(launcherCopy);
+
+      chatApi().open();
+      await waitFor(() => shadow.querySelector(".pw-chat-panel")?.hasAttribute("hidden") === false, "open panel");
+      const statusDot = shadow.querySelector(".pw-chat-status-dot");
+      expect(statusDot?.className).toContain(`pw-chat-tone-${tone}`);
+      expect(shadow.querySelector(".pw-chat-status")?.textContent).toContain(headerCopy);
+    },
+  );
+
+  it("shows the service-failure presence tone when availability cannot be read", async () => {
+    stubFetch((method, path) => {
+      if (path === "/api/chat/availability") {
+        return { status: 503, body: { error: "unavailable" } };
+      }
+      return healthy(method, path);
+    });
+    await loadCampaignWidget();
+    await waitFor(() => Boolean(widgetHost()), "widget host");
+
+    const shadow = shadowRoots[0];
+    const styleText = [...shadow.querySelectorAll("style")].map((node) => node.textContent).join("\n");
+    expect(styleText).toContain(".pw-chat-tone-unavailable { background: #DC2626; }");
+    expect(shadow.querySelector(".pw-chat-launcher-dot")?.className).toContain("pw-chat-tone-unavailable");
+    expect(shadow.querySelector(".pw-chat-launcher")?.getAttribute("aria-label")).toContain(
+      "Chat temporarily unavailable",
+    );
+
+    chatApi().open();
+    await waitFor(() => shadow.querySelector(".pw-chat-panel")?.hasAttribute("hidden") === false, "open panel");
+    expect(shadow.querySelector(".pw-chat-status-dot")?.className).toContain("pw-chat-tone-unavailable");
+    expect(shadow.querySelector(".pw-chat-status")?.textContent).toContain("Chat temporarily unavailable");
+  });
+
+  it("does not emit chat analytics while analytics consent is denied", async () => {
+    stubFetch(healthy);
+    const dataLayer: unknown[] = [];
+    (window as { dataLayer?: unknown[] }).dataLayer = dataLayer;
+    (window as { gtag?: (...args: unknown[]) => void }).gtag = (...args: unknown[]) => {
+      dataLayer.push(args);
+    };
+    (window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__ = false;
+
+    await loadCampaignWidget();
+    await waitFor(() => Boolean(widgetHost()), "widget host");
+    chatApi().open();
+    await waitFor(() => Boolean(localStorage.getItem("rrb_silver_chat_session_id")), "session id");
+
+    expect(dataLayer.some((entry) => JSON.stringify(entry).includes("chat_open"))).toBe(false);
+  });
+
+  it("emits a sanitized chat_open analytics event after analytics consent is granted", async () => {
+    stubFetch(healthy);
+    const dataLayer: unknown[] = [];
+    (window as { dataLayer?: unknown[] }).dataLayer = dataLayer;
+    (window as { gtag?: (...args: unknown[]) => void }).gtag = (...args: unknown[]) => {
+      dataLayer.push(args);
+    };
+    (window as { __PRIMEWAYZ_ANALYTICS_CONSENT__?: boolean }).__PRIMEWAYZ_ANALYTICS_CONSENT__ = true;
+
+    await loadCampaignWidget();
+    await waitFor(() => Boolean(widgetHost()), "widget host");
+    chatApi().open();
+    await waitFor(() => dataLayer.some((entry) => Array.isArray(entry) && entry[1] === "chat_open"), "chat_open");
+
+    const openEvent = dataLayer.find((entry) => Array.isArray(entry) && entry[1] === "chat_open") as unknown[];
+    expect(openEvent[2]).toMatchObject({ placement: "chat_widget" });
+    expect(JSON.stringify(openEvent)).not.toContain("rrb-silver-campaign");
+    expect(JSON.stringify(openEvent)).not.toMatch(/@|session/i);
   });
 });
