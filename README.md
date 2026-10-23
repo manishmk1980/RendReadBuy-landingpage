@@ -42,6 +42,9 @@ npm run lint
 | `NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL` | unset | Approved value: `https://uk.primewayz.com`. https only, with no credentials, query or fragment. Chat stays off while this is empty, and also while enablement is not `on` or `true`. |
 | `NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL` | unset | Approved value: `https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js`. An https URL, or a same-origin path when a copy is served from this site. Chat stays off while this is empty. |
 | `NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY` | unset | Approved value for widget 1.3.0: `sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4`. A cross-origin URL with a hash is loaded as `crossorigin="anonymous"`. Leave empty to skip SRI. |
+| `CHAT_ADMIN_USERNAME` | unset | Server-only. Single campaign operator username for `/admin`. Never `NEXT_PUBLIC_`. |
+| `CHAT_ADMIN_PASSWORD_HASH` | unset | Server-only. scrypt PHC-style password hash (not plaintext). See generation procedure below. |
+| `CHAT_ADMIN_SESSION_SECRET` | unset | Server-only. ≥32-byte secret used to HMAC-sign the admin session cookie and CSRF tokens. |
 
 Shared chat is off unless it is explicitly enabled and both URLs are valid. Primewayz Infotech operates the chat service. The public API host remains `https://uk.primewayz.com`; that hostname is the technical endpoint, not the visitor-facing brand. The service owns tenant configuration, conversations, sessions, replies, leads and administration. This page only loads the public widget. It does not proxy chat traffic and it does not ship administrative credentials. The Silver site key is `rentreadbuy-silver` (tenant `rrb-silver-campaign`); do not reuse the general `rrb` or `pw-uk` tenants.
 
@@ -50,3 +53,21 @@ With the flag on, the footer shows the chat privacy notice and links to `https:/
 This page does not set `__PRIMEWAYZ_ANALYTICS_CONSENT__`, so the widget does not forward chat events into analytics. The Silver page has its own cookie banner and footer Cookie settings. Those controls save an analytics and advertising choice for this browser only, and they do not enable chat.
 
 See `.env.example` for a template.
+
+## Silver chat operator login (`/admin`)
+
+Campaign-local operator sign-in for Silver chat administration on this site only. It uses an HMAC-signed httpOnly session cookie (`rrb_silver_chat_admin_session`) with `Path=/` so the same cookie covers both `/admin` pages and `/api/admin/*` auth APIs (a cookie may only declare one path prefix). Sessions expire after 8 hours and are revoked on logout (in-process revocation map; multi-instance deploys need a shared store before scaling). State-changing requests require a matching CSRF double-submit token and a same-origin `Origin`/`Referer`. Login attempts are throttled per IP in-process (5 failures / 15 minutes).
+
+This login never grants Primewayz Host Admin, platform Owner, or cross-tenant authorization. Tenant ids are not accepted from the client as authorization. Integration Bearer tokens stay out of the browser and out of this login flow. Conversation inbox/reply/presence stay unimplemented until a Silver-specific central integration credential and scopes are available. The public widget and membership deep links are unchanged.
+
+### Generate credentials (do not commit real values)
+
+```bash
+# Session / CSRF HMAC secret (≥32 bytes). Copy into CHAT_ADMIN_SESSION_SECRET.
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+
+# Password hash for CHAT_ADMIN_PASSWORD_HASH. Replace 'your-password' locally; do not log it.
+node -e "const {randomBytes,scryptSync}=require('crypto'); const password=process.argv[1]; const n=16384,r=8,p=1,keylen=64; const salt=randomBytes(16); const maxmem=128*r*n*2+64*1024*1024; const hash=scryptSync(password,salt,keylen,{N:n,r,p,maxmem}); console.log('\$scrypt\$n='+n+',r='+r+',p='+p+'$'+salt.toString('base64url')+'$'+hash.toString('base64url'));" "your-password"
+```
+
+Set `CHAT_ADMIN_USERNAME` to the operator username, store the hash in `CHAT_ADMIN_PASSWORD_HASH`, and keep plaintext passwords out of env files, tickets, and chat. Rotate `CHAT_ADMIN_SESSION_SECRET` to invalidate outstanding sessions.
