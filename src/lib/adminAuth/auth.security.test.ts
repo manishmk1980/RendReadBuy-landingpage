@@ -249,6 +249,32 @@ describe("admin auth security", () => {
     expect(body.error).toMatch(/origin/i);
   });
 
+  it("accepts login Origin behind HTTPS termination when CHAT_ADMIN_PUBLIC_ORIGIN is set", async () => {
+    vi.stubEnv("CHAT_ADMIN_PUBLIC_ORIGIN", "https://join.rentreadbuy.com");
+    const { login } = await loadRoutes();
+    const csrf = createCsrfToken(SECRET);
+    const response = await login.POST(
+      new Request("http://127.0.0.1:3100/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://join.rentreadbuy.com",
+          "x-forwarded-host": "evil.example",
+          "x-forwarded-proto": "http",
+          [ADMIN_CSRF_HEADER]: csrf,
+          cookie: cookieHeader({ [ADMIN_CSRF_COOKIE]: csrf }),
+        },
+        body: JSON.stringify({
+          username: USERNAME,
+          password: PASSWORD,
+          csrfToken: csrf,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(setCookieHeader(response)).toContain(ADMIN_SESSION_COOKIE);
+  });
+
   it("rejects forged session cookies on the session probe", async () => {
     const { session } = await loadRoutes();
     const response = await session.GET(
