@@ -156,3 +156,138 @@
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+.console {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0 0 0.5rem;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.statusGrid dt {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin: 0 0 0.15rem;
+}
+
+.statusGrid dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.inboxLayout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 48rem) {
+  .inboxLayout {
+    grid-template-columns: minmax(12rem, 16rem) 1fr;
+    align-items: start;
+  }
+}
+
+.conversationList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.conversationItem,
+.conversationActive {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  background: var(--color-surface);
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.conversationActive {
+  border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  background: color-mix(in srgb, var(--color-brand-soft) 40%, var(--color-surface));
+}
+
+.conversationMeta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.conversationPreview {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationDetail {
+  min-width: 0;
+}
+
+.transcript {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.transcript li {
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--color-paper-warm) 70%, var(--color-surface));
+  border-left: 3px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
+}
+
+.transcript p {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.replyBox {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.textarea {
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 18%, transparent);
+  padding: 0.65rem 0.75rem;
+  width: 100%;
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

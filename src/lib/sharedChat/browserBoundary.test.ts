@@ -26,6 +26,7 @@ function isAdminServerModule(file: string): boolean {
   const r = rel(file);
   return (
     r.startsWith("src/lib/adminAuth/") ||
+    r.startsWith("src/lib/chatOps/") ||
     r.startsWith("src/app/api/admin/") ||
     r.startsWith("src/app/admin/") ||
     r === "src/proxy.ts"
@@ -43,6 +44,11 @@ const CREDENTIAL_MARKERS = [
   /Bearer\s/,
   /\bx-api-key\b/i,
   /WORDPRESS_CHAT/i,
+  /RRB_SILVER_CHAT_INTEGRATION_TOKEN/,
+  /RRB_SILVER_CHAT_CONNECT_CREDENTIAL/,
+  /CHAT_INTEGRATION_API_BASE_URL/,
+  /\bcck_[a-f0-9]{8,}/,
+  /\bccs_[A-Za-z0-9_-]{8,}/,
   /ADMIN_(TOKEN|PASSWORD|SECRET|KEY)/i,
   /CHAT_ADMIN_(PASSWORD_HASH|SESSION_SECRET)/,
   /JWT_SECRET/i,
@@ -54,7 +60,22 @@ const ALLOWED_SERVER_ENV = new Set([
   "CHAT_ADMIN_USERNAME",
   "CHAT_ADMIN_PASSWORD_HASH",
   "CHAT_ADMIN_SESSION_SECRET",
+  "CHAT_INTEGRATION_API_BASE_URL",
+  "RRB_SILVER_CHAT_INTEGRATION_TOKEN",
+  "RRB_SILVER_CHAT_CONNECT_CREDENTIAL",
 ]);
+
+const ALLOWED_ADMIN_API_PREFIXES = [
+  "src/app/api/admin/auth/",
+  "src/app/api/admin/chat/",
+];
+
+/** Lifecycle activate/heartbeat must not be ordinary operator routes. */
+const FORBIDDEN_ADMIN_API_SEGMENTS = [
+  "/connect/activate/",
+  "/connect/heartbeat/",
+  "/chat-connect/",
+];
 
 describe("browser boundary for the shared chat", () => {
   it("reads only public env in non-admin application code", () => {
@@ -82,15 +103,19 @@ describe("browser boundary for the shared chat", () => {
     expect(offenders.map(rel)).toEqual([]);
   });
 
-  it("allows only admin auth API routes — no chat traffic proxy", () => {
+  it("allows only admin auth and chat-ops API routes — no public chat proxy", () => {
     const routes = listFiles(path.join(root, "src", "app"), /^route\.(ts|js)$/).map(rel);
-    const allowed = routes.every(
-      (file) =>
-        file.startsWith("src/app/api/admin/auth/") &&
-        /\/(login|logout|session)\/route\.ts$/.test(file),
-    );
     expect(routes.length).toBeGreaterThan(0);
-    expect(allowed).toBe(true);
+    for (const file of routes) {
+      expect(
+        ALLOWED_ADMIN_API_PREFIXES.some((prefix) => file.startsWith(prefix)),
+        file,
+      ).toBe(true);
+      expect(
+        FORBIDDEN_ADMIN_API_SEGMENTS.some((segment) => file.includes(segment)),
+        file,
+      ).toBe(false);
+    }
 
     const proxies = listFiles(path.join(root, "src"), /^(proxy|middleware)\.(ts|js)$/).map(rel);
     expect(proxies).toEqual(["src/proxy.ts"]);
@@ -109,11 +134,13 @@ describe("browser boundary for the shared chat", () => {
     }
   });
 
-  it("does not expose CHAT_ADMIN secrets in client components", () => {
+  it("does not expose CHAT_ADMIN or integration secrets in client components", () => {
     const clients = sourceFiles.filter(isClientModule);
     const offenders = clients.filter((file) => {
       const text = readFileSync(file, "utf8");
-      return /CHAT_ADMIN_|passwordHash|sessionSecret|scrypt/i.test(text);
+      return /CHAT_ADMIN_|RRB_SILVER_CHAT_INTEGRATION_TOKEN|RRB_SILVER_CHAT_CONNECT_CREDENTIAL|CHAT_INTEGRATION_API_BASE_URL|passwordHash|sessionSecret|scrypt|cck_[a-f0-9]{8,}|ccs_[A-Za-z0-9_-]{8,}/i.test(
+        text,
+      );
     });
     expect(offenders.map(rel)).toEqual([]);
   });
@@ -125,6 +152,10 @@ describe("browser boundary for the shared chat", () => {
       return [
         /Bearer\s/,
         /WORDPRESS_CHAT/i,
+        /RRB_SILVER_CHAT_INTEGRATION_TOKEN/,
+        /RRB_SILVER_CHAT_CONNECT_CREDENTIAL/,
+        /CHAT_INTEGRATION_API_BASE_URL/,
+        /\bcck_[a-f0-9]{8,}/,
         /ADMIN_(TOKEN|PASSWORD|SECRET|KEY)/i,
         /CHAT_ADMIN_(PASSWORD_HASH|SESSION_SECRET)/,
         /JWT_SECRET/,
