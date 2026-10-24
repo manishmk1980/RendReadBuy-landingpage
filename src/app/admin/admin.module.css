@@ -1,0 +1,304 @@
+.shell {
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%, color-mix(in srgb, var(--color-brand-soft) 70%, transparent), transparent),
+    linear-gradient(165deg, var(--color-paper) 0%, var(--color-paper-warm) 55%, #ebe3d4 100%);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+.frame {
+  width: min(40rem, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 3.5rem) 0 clamp(3rem, 8vw, 5rem);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.75rem;
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--color-brand-strong);
+  line-height: 1.1;
+}
+
+.brandMark {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.panel {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
+  padding: clamp(1.5rem, 3vw, 2rem);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  margin: 0 0 0.5rem;
+}
+
+.lede {
+  margin: 0 0 1.5rem;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.input {
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 18%, transparent);
+  padding: 0.65rem 0.75rem;
+  width: 100%;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.submit {
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-action);
+  background: var(--color-brand);
+  border: 0;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.submit:hover {
+  background: var(--color-brand-strong);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, #b42318 12%, var(--color-surface));
+  color: #7a1a12;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.operator {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.note {
+  margin: 1.25rem 0 0;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand-soft) 45%, var(--color-surface));
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+
+.logoutWrap {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: end;
+}
+
+.ghost {
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-brand-strong);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  background: color-mix(in srgb, var(--color-brand-soft) 50%, transparent);
+}
+
+.ghost:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ghost:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.console {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0 0 0.5rem;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.statusGrid dt {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin: 0 0 0.15rem;
+}
+
+.statusGrid dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.inboxLayout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 48rem) {
+  .inboxLayout {
+    grid-template-columns: minmax(12rem, 16rem) 1fr;
+    align-items: start;
+  }
+}
+
+.conversationList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.conversationItem,
+.conversationActive {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  background: var(--color-surface);
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.conversationActive {
+  border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  background: color-mix(in srgb, var(--color-brand-soft) 40%, var(--color-surface));
+}
+
+.conversationMeta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.conversationPreview {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationDetail {
+  min-width: 0;
+}
+
+.transcript {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.transcript li {
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--color-paper-warm) 70%, var(--color-surface));
+  border-left: 3px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
+}
+
+.transcript p {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.replyBox {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.textarea {
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 18%, transparent);
+  padding: 0.65rem 0.75rem;
+  width: 100%;
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
