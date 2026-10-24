@@ -45,6 +45,7 @@ npm run lint
 | `CHAT_ADMIN_USERNAME` | unset | Server-only. Single campaign operator username for `/admin`. Never `NEXT_PUBLIC_`. |
 | `CHAT_ADMIN_PASSWORD_HASH` | unset | Server-only. scrypt PHC-style password hash (not plaintext). See generation procedure below. |
 | `CHAT_ADMIN_SESSION_SECRET` | unset | Server-only. ≥32-byte secret used to HMAC-sign the admin session cookie and CSRF tokens. |
+| `CHAT_ADMIN_PUBLIC_ORIGIN` | unset | Server-only. Explicit public browser origin for admin mutation `Origin`/`Referer` checks. Required in production when HTTPS terminates at Apache (or similar) and Next listens on `127.0.0.1`. Approved value: `https://join.rentreadbuy.com`. Fail closed when missing or invalid in production; never derived from client `X-Forwarded-*` headers. Leave unset for local `next dev`. |
 | `CHAT_ADMIN_TRUST_PROXY` | unset | Server-only. Set to `1`/`true` only when the edge proxy overwrites/strips client `X-Forwarded-For` (and optionally sets `X-Real-IP`). When unset, login throttling ignores those headers so spoofed values cannot mint fresh buckets. |
 | `CHAT_ADMIN_SHARED_STORE_URL` | unset | Server-only. Optional Upstash-compatible Redis REST URL (`https` only). Required with the token below before running more than one Node instance. |
 | `CHAT_ADMIN_SHARED_STORE_TOKEN` | unset | Server-only. Bearer token for the shared Redis REST store. Leave unset for single-process memory state. |
@@ -59,7 +60,7 @@ See `.env.example` for a template.
 
 ## Silver chat operator login (`/admin`)
 
-Campaign-local operator sign-in for Silver chat administration on this site only. It uses an HMAC-signed httpOnly session cookie (`rrb_silver_chat_admin_session`) with `Path=/` so the same cookie covers both `/admin` pages and `/api/admin/*` auth APIs (a cookie may only declare one path prefix). Sessions expire after 8 hours and are revoked on logout. Logout navigation runs only after the logout API succeeds. State-changing requests require a matching CSRF double-submit token and a same-origin `Origin`/`Referer`. Login attempts are throttled (5 failures / 15 minutes) using a non-spoofable key unless `CHAT_ADMIN_TRUST_PROXY` is enabled behind a stripping edge.
+Campaign-local operator sign-in for Silver chat administration on this site only. It uses an HMAC-signed httpOnly session cookie (`rrb_silver_chat_admin_session`) with `Path=/` so the same cookie covers both `/admin` pages and `/api/admin/*` auth APIs (a cookie may only declare one path prefix). Sessions expire after 8 hours and are revoked on logout. Logout navigation runs only after the logout API succeeds. State-changing requests require a matching CSRF double-submit token and a trusted `Origin`/`Referer` (compared to `CHAT_ADMIN_PUBLIC_ORIGIN` in production, or to the request URL origin in local development). Login attempts are throttled (5 failures / 15 minutes) using a non-spoofable key unless `CHAT_ADMIN_TRUST_PROXY` is enabled behind a stripping edge.
 
 ### Deployment requirements for auth state
 

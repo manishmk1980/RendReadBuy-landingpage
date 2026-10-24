@@ -29,7 +29,12 @@ export {
   issueCsrfCookie,
   readCookieFromRequest,
 } from "./http";
-export { isTrustedMutationOrigin } from "./origin";
+export {
+  CHAT_ADMIN_PUBLIC_ORIGIN_ENV,
+  isTrustedMutationOrigin,
+  parseConfiguredPublicOrigin,
+  resolveTrustedMutationOrigin,
+} from "./origin";
 export {
   hashPassword,
   timingSafeEqualString,

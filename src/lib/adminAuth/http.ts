@@ -72,6 +72,8 @@ export type MutationGuardResult =
 
 /**
  * CSRF (double-submit) + Origin/Referer for state-changing admin APIs.
+ * Origin checks use CHAT_ADMIN_PUBLIC_ORIGIN when set (required in production
+ * behind HTTPS termination); they never trust X-Forwarded-Host/Proto.
  * Uses CHAT_ADMIN_SESSION_SECRET to MAC CSRF tokens when configured.
  * When auth is not configured, mutations still fail closed on Origin.
  */

@@ -38,6 +38,7 @@ Already required for conversation ops:
 - `CHAT_INTEGRATION_API_BASE_URL`
 - `RRB_SILVER_CHAT_INTEGRATION_TOKEN`
 - `CHAT_ADMIN_USERNAME` / `CHAT_ADMIN_PASSWORD_HASH` / `CHAT_ADMIN_SESSION_SECRET`
+- `CHAT_ADMIN_PUBLIC_ORIGIN=https://join.rentreadbuy.com` (required behind Apache HTTPS termination)
 
 Multi-instance:
 
