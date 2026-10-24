@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_CSRF_COOKIE, ADMIN_CSRF_HEADER } from "@/lib/adminAuth/constants";
+import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
 import styles from "../../admin.module.css";
+
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 type ConversationOpsStatus =
   | "not_configured"
@@ -47,6 +50,16 @@ type ConversationData = {
   sessionId?: string;
   status?: string;
   messages?: TranscriptMessage[];
+};
+
+type PresenceResponse = {
+  ok?: boolean;
+  contributing?: boolean;
+  expiresInMs?: number;
+  presencePolicy?: string;
+  presencePolicyDegraded?: boolean;
+  cleared?: number;
+  error?: { message?: string; code?: string };
 };
 
 function readCsrfCookie(): string | null {
@@ -96,6 +109,160 @@ export function OperatorConsole() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [started, setStarted] = useState(false);
+  const [online, setOnline] = useState(false);
+  const [presenceDetail, setPresenceDetail] = useState<string | null>(null);
+  const [presenceError, setPresenceError] = useState<string | null>(null);
+  const [expiresInMs, setExpiresInMs] = useState<number | null>(null);
+
+  const onlineRef = useRef(false);
+  const consoleInstanceIdRef = useRef<string | null>(null);
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    onlineRef.current = online;
+  }, [online]);
+
+  useEffect(() => {
+    consoleInstanceIdRef.current = getOrCreateConsoleInstanceId();
+  }, []);
+
+  const sendHeartbeat = useCallback(async (): Promise<boolean> => {
+    const consoleInstanceId =
+      consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
+    consoleInstanceIdRef.current = consoleInstanceId;
+    const { status, body } = await adminMutate<PresenceResponse>(
+      "/api/admin/chat/presence/heartbeat",
+      { consoleInstanceId },
+    );
+    if (status === 401) {
+      setPresenceError("Session expired. Sign in again.");
+      setOnline(false);
+      return false;
+    }
+    if (status >= 400) {
+      setPresenceError(body.error?.message ?? "Presence heartbeat failed.");
+      return false;
+    }
+    setPresenceError(null);
+    setExpiresInMs(typeof body.expiresInMs === "number" ? body.expiresInMs : null);
+    const policy = body.presencePolicy ?? "unknown";
+    const degraded = body.presencePolicyDegraded ? " (policy degraded)" : "";
+    setPresenceDetail(`Contributing · policy ${policy}${degraded}`);
+    return true;
+  }, []);
+
+  const sendOffline = useCallback(async (bestEffort = false): Promise<void> => {
+    const consoleInstanceId =
+      consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
+    try {
+      const { status, body } = await adminMutate<PresenceResponse>(
+        "/api/admin/chat/presence/offline",
+        { consoleInstanceId, notAfterMs: Date.now() },
+      );
+      if (!bestEffort && status === 401) {
+        setPresenceError("Session expired. Sign in again.");
+      } else if (!bestEffort && status >= 400) {
+        setPresenceError(body.error?.message ?? "Could not go Offline.");
+      } else if (status < 400) {
+        setPresenceError(null);
+        setPresenceDetail("Offline for this console tab.");
+        setExpiresInMs(null);
+      }
+    } catch {
+      if (!bestEffort) {
+        setPresenceError("Could not reach presence service.");
+      }
+    }
+  }, []);
+
+  const stopHeartbeatLoop = useCallback(() => {
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+  }, []);
+
+  const startHeartbeatLoop = useCallback(() => {
+    stopHeartbeatLoop();
+    heartbeatTimerRef.current = setInterval(() => {
+      if (!onlineRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      void sendHeartbeat();
+    }, HEARTBEAT_INTERVAL_MS);
+  }, [sendHeartbeat, stopHeartbeatLoop]);
+
+  const goOnline = useCallback(async () => {
+    setBusy(true);
+    setPresenceError(null);
+    try {
+      const ok = await sendHeartbeat();
+      if (!ok) {
+        setOnline(false);
+        return;
+      }
+      setOnline(true);
+      startHeartbeatLoop();
+    } finally {
+      setBusy(false);
+    }
+  }, [sendHeartbeat, startHeartbeatLoop]);
+
+  const goOffline = useCallback(async () => {
+    setBusy(true);
+    try {
+      stopHeartbeatLoop();
+      setOnline(false);
+      await sendOffline(false);
+    } finally {
+      setBusy(false);
+    }
+  }, [sendOffline, stopHeartbeatLoop]);
+
+  useEffect(() => {
+    const onPageHide = () => {
+      if (!onlineRef.current) return;
+      const consoleInstanceId =
+        consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
+      const csrfToken = readCsrfCookie();
+      const payload = JSON.stringify({
+        consoleInstanceId,
+        notAfterMs: Date.now(),
+        csrfToken,
+      });
+      try {
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon("/api/admin/chat/presence/offline", blob);
+          return;
+        }
+      } catch {
+        // fall through to best-effort fetch
+      }
+      void sendOffline(true);
+    };
+
+    const onVisibility = () => {
+      if (
+        document.visibilityState === "visible" &&
+        onlineRef.current
+      ) {
+        void sendHeartbeat();
+      }
+    };
+
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      stopHeartbeatLoop();
+      if (onlineRef.current) {
+        void sendOffline(true);
+      }
+    };
+  }, [sendHeartbeat, sendOffline, stopHeartbeatLoop]);
 
   const loadDashboard = useCallback(async () => {
     const { status, body } = await adminGet<{
@@ -221,6 +388,64 @@ export function OperatorConsole() {
 
   return (
     <div className={styles.console}>
+      <section className={styles.panel} aria-labelledby="presence-title">
+        <h2 id="presence-title" className={styles.sectionTitle}>
+          Operator availability
+        </h2>
+        <p className={styles.lede}>
+          Go Online only when you are ready to handle Silver campaign chats.
+          Login alone does not mark the team Online. Each browser tab has its
+          own presence session.
+        </p>
+        <dl className={styles.statusGrid}>
+          <div>
+            <dt>This tab</dt>
+            <dd>{online ? "Online" : "Offline"}</dd>
+          </div>
+          <div>
+            <dt>Heartbeat TTL</dt>
+            <dd>
+              {expiresInMs != null
+                ? `${Math.round(expiresInMs / 1000)}s`
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Detail</dt>
+            <dd>{presenceDetail ?? "Not contributing"}</dd>
+          </div>
+        </dl>
+        {presenceError ? (
+          <p className={styles.error} role="alert">
+            {presenceError}
+          </p>
+        ) : null}
+        <div className={styles.actionRow}>
+          <button
+            type="button"
+            className={styles.submit}
+            disabled={busy || online}
+            onClick={() => void goOnline()}
+          >
+            Go Online
+          </button>
+          <button
+            type="button"
+            className={styles.ghost}
+            disabled={busy || !online}
+            onClick={() => void goOffline()}
+          >
+            Go Offline
+          </button>
+        </div>
+        <p className={styles.note}>
+          Under the current Host policy, verified Online for visitors requires
+          Option 1 (`heartbeat_required_online`) — not activated for Silver in
+          this workstream. Heartbeats still record so Host can flip the policy
+          after soak.
+        </p>
+      </section>
+
       <section className={styles.panel} aria-labelledby="ops-status-title">
         <h2 id="ops-status-title" className={styles.sectionTitle}>
           Connection status
@@ -249,7 +474,7 @@ export function OperatorConsole() {
             </div>
             <div>
               <dt>Production ready</dt>
-              <dd>no — admin-auth hardening pending</dd>
+              <dd>no — enable shared auth store on multi-instance hosts</dd>
             </div>
           </dl>
         ) : (

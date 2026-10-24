@@ -40,6 +40,21 @@ export {
   type OpsClientFetch,
 } from "./opsClient";
 export {
+  buildSilverOperatorRef,
+  parseConsoleInstanceId,
+  CONSOLE_INSTANCE_ID_PATTERN,
+  OPERATOR_REF_MAX,
+} from "./operatorRef";
+export {
+  callCentralPresenceHeartbeat,
+  callCentralPresenceOffline,
+  CENTRAL_OPERATOR_PRESENCE_HEARTBEAT_PATH,
+  CENTRAL_OPERATOR_PRESENCE_OFFLINE_PATH,
+  type PresenceClientFetch,
+  type PresenceHeartbeatResult,
+  type PresenceOfflineResult,
+} from "./presenceClient";
+export {
   probeConversationOpsReadiness,
   type ConversationOpsReadiness,
   type ProbeReadinessOptions,

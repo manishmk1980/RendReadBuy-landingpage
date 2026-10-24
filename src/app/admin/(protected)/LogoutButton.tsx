@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ADMIN_CSRF_COOKIE, ADMIN_CSRF_HEADER } from "@/lib/adminAuth/constants";
+import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
 import styles from "../admin.module.css";
 
 function readCsrfCookie(): string | null {
@@ -22,6 +23,28 @@ export function LogoutButton() {
     setPending(true);
     setError(null);
     const csrfToken = readCsrfCookie();
+    const consoleInstanceId = getOrCreateConsoleInstanceId();
+
+    // Best-effort Offline before session revoke. TTL clears residual Online.
+    try {
+      await fetch("/api/admin/chat/presence/offline", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(csrfToken ? { [ADMIN_CSRF_HEADER]: csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          csrfToken,
+          consoleInstanceId,
+          notAfterMs: Date.now(),
+        }),
+        credentials: "same-origin",
+        keepalive: true,
+      });
+    } catch {
+      // ignore — logout must still proceed
+    }
+
     try {
       const response = await fetch("/api/admin/auth/logout", {
         method: "POST",
@@ -34,7 +57,9 @@ export function LogoutButton() {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         setError(data?.error ?? "Sign-out failed. Session may still be active.");
         setPending(false);
         return;
@@ -50,7 +75,12 @@ export function LogoutButton() {
 
   return (
     <div className={styles.logoutWrap}>
-      <button className={styles.ghost} type="button" onClick={onLogout} disabled={pending}>
+      <button
+        className={styles.ghost}
+        type="button"
+        onClick={() => void onLogout()}
+        disabled={pending}
+      >
         {pending ? "Signing out…" : "Log out"}
       </button>
       {error ? (

@@ -55,7 +55,7 @@ function assertActionPermitted(action: string): void {
     throw new ChatOpsError(
       403,
       "action_not_permitted",
-      "Presence mutation is not permitted for the Silver campaign operator.",
+      "Presence mutation via the ops action path is not permitted. Use the session-gated presence adapter.",
     );
   }
 }

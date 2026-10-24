@@ -25,7 +25,16 @@ describe("LogoutButton", () => {
     vi.unstubAllGlobals();
   });
 
-  it("navigates to login only after a successful logout response", async () => {
+  it("best-effort Offline then navigates after successful logout", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/admin/chat/presence/offline")) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
     render(<LogoutButton />);
     fireEvent.click(screen.getByRole("button", { name: /log out/i }));
 
@@ -33,12 +42,25 @@ describe("LogoutButton", () => {
       expect(replace).toHaveBeenCalledWith("/admin/login");
     });
     expect(refresh).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "/api/admin/chat/presence/offline",
+    );
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/api/admin/auth/logout");
   });
 
   it("does not navigate when logout fails so the session stays on the operator UI", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify({ error: "Invalid CSRF token." }), { status: 403 })),
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/presence/offline")) {
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ error: "Invalid CSRF token." }), {
+          status: 403,
+        });
+      }),
     );
 
     render(<LogoutButton />);
@@ -53,7 +75,11 @@ describe("LogoutButton", () => {
   it("does not navigate when the logout request throws", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/presence/offline")) {
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
         throw new Error("network down");
       }),
     );

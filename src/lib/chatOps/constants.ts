@@ -27,8 +27,9 @@ export const CENTRAL_CHAT_CONNECT_HEARTBEAT_PATH =
 export const CHAT_OPS_API_VERSION = "1" as const;
 
 /**
- * Operator-facing actions this campaign may call.
- * Archive, delete, and presence mutation are intentionally excluded.
+ * Operator-facing actions this campaign may call via the WordPress-named ops path.
+ * Archive/delete stay excluded. Human Online/Offline uses the separate v1 presence
+ * adapter (`/api/admin/chat/presence/*` → `/api/v1/operator-presence/*`), not these actions.
  */
 export const SILVER_CHAT_OPS_ACTIONS = [
   "dashboard",

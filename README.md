@@ -82,9 +82,19 @@ Authenticated operators may use `/api/admin/chat/*` once a Host-bound ops creden
 | `RRB_SILVER_CHAT_INTEGRATION_TOKEN` | Ops Bearer for dashboard / conversation / reply / resolve / reopen / diagnostics. Bound centrally to `rrb-silver-campaign`. |
 | `RRB_SILVER_CHAT_CONNECT_CREDENTIAL` | Optional on this host. Chat Connect installation credential (`cck_….ccs_…`) for Host lifecycle activate/heartbeat only. **Not** used by ordinary operator routes. |
 
-The ops Bearer and the Chat Connect installation credential are **independently required** for a complete Connect installation: conversation ops need the Bearer; Host provisioning/activation needs the installation credential. `conversationOps` reports `ready` only after an authenticated, tenant-validated central diagnostics response — never from env presence alone. Archive, delete, and presence mutation are not exposed.
+The ops Bearer and the Chat Connect installation credential are **independently required** for a complete Connect installation: conversation ops need the Bearer; Host provisioning/activation needs the installation credential. `conversationOps` reports `ready` only after an authenticated, tenant-validated central diagnostics response — never from env presence alone. Archive and delete are not exposed.
 
-This administration interface is **not production-ready** until unresolved campaign admin-auth hardening findings are closed (shared multi-instance session revocation and login throttle). See `specs/pw-chat-silver-connect-02/`.
+### Operator presence (WS-4)
+
+Authenticated operators may go Online/Offline from `/admin` via `/api/admin/chat/presence/heartbeat` and `/offline`. Those routes:
+
+1. Require the campaign operator session + CSRF + same-origin checks.
+2. Derive an opaque `operatorRef` from the verified session and a per-tab console instance id.
+3. Call central `POST /api/v1/operator-presence/*` with the server-only ops Bearer (tenant-bound to `rrb-silver-campaign`).
+
+Login alone does **not** mark the team Online. Ordinary visitors and membership customers cannot call these routes. `heartbeat_required_online` is **not** activated for Silver by this app — Host flips that policy after soak. See `docs/pw-chat-presence-ws4-silver.md`.
+
+This administration interface remains cautious on multi-instance hosts until `CHAT_ADMIN_SHARED_STORE_*` is configured. See `specs/pw-chat-silver-connect-02/`.
 
 ### Generate credentials (do not commit real values)
 

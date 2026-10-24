@@ -92,9 +92,18 @@ Central: `{ action, sessionId, clientActionId, actor, text }`.
 | Surface | Reason |
 |---|---|
 | archive / restore / delete | Out of Silver scope |
-| presence / availability mutation | Excluded unless separately approved |
+| presence / availability via ops `action` path | Rejected locally; use WS-4 session-gated `/api/admin/chat/presence/*` |
 | `/api/admin/chat/connect/activate\|heartbeat` | Host lifecycle only; not ordinary operator routes |
 | Browser-supplied tenant identity | Rejected (`tenant_override_rejected`) |
+
+## WS-4 operator presence (session-gated)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/admin/chat/presence/heartbeat` | CSRF + session; body `{ consoleInstanceId, csrfToken }`; server derives `operatorRef` |
+| POST | `/api/admin/chat/presence/offline` | Same; optional `notAfterMs`; best-effort on logout / pagehide |
+
+Upstream: `POST /api/v1/operator-presence/{heartbeat\|offline}` with server-only `RRB_SILVER_CHAT_INTEGRATION_TOKEN`. Tenant comes only from the credential. Option 1 / `heartbeat_required_online` is **not** activated by this campaign.
 
 ## Error envelope
 
