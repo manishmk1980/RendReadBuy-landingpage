@@ -4,10 +4,17 @@ import {
   getVerifiedAdminSessionFromRequest,
   isAdminAuthConfigured,
 } from "@/lib/adminAuth";
+import {
+  getChatOpsConfigStatus,
+  probeConversationOpsReadiness,
+} from "@/lib/chatOps";
 
 /**
  * Session probe for the admin shell. Requires a valid signed cookie.
  * Does not accept tenant ids or grant Host/Owner privileges.
+ *
+ * conversationOps is ready only after a tenant-validated central diagnostics
+ * response. Env presence alone never yields ready.
  */
 export async function GET(request: Request) {
   if (!isAdminAuthConfigured()) {
@@ -22,14 +29,37 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  return NextResponse.json({
+  const configStatus = getChatOpsConfigStatus();
+  let conversationOps: string = "not_configured";
+  let conversationOpsDetail: string | undefined;
+
+  if (!configStatus.configured) {
+    conversationOps = "not_configured";
+    conversationOpsDetail =
+      "Silver chat ops API base URL or integration token is not configured.";
+  } else {
+    const readiness = await probeConversationOpsReadiness();
+    conversationOps = readiness.status;
+    conversationOpsDetail = readiness.detail;
+  }
+
+  const response = NextResponse.json({
     username: session.sub,
     role: CAMPAIGN_OPERATOR_ROLE,
     expiresAt: session.exp,
+    conversationOps,
+    conversationOpsDetail,
     /**
-     * Conversation APIs stay unavailable until a Silver-specific central
-     * integration credential and scopes are approved and bound.
+     * Installation (Chat Connect) credential is Host-managed and independent
+     * of the ops Bearer token. Operator routes never use it.
      */
-    conversationOps: "blocked_pending_silver_integration",
+    connectCredentialConfigured: configStatus.connectCredentialConfigured,
+    /**
+     * Conservative until Host confirms single-process deploy or configures
+     * CHAT_ADMIN_SHARED_STORE_* for multi-instance revocation/throttling.
+     */
+    productionReady: false,
   });
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }

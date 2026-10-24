@@ -267,6 +267,7 @@ describe("admin auth security", () => {
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.role).toBe("rrb_silver_campaign_operator");
     expect(JSON.stringify(body)).not.toMatch(/host|owner|isPlatformOwner|tenantId/i);
-    expect(body.conversationOps).toBe("blocked_pending_silver_integration");
+    expect(body.conversationOps).toBe("not_configured");
+    expect(body.productionReady).toBe(false);
   });
 });

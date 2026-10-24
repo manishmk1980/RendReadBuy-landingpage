@@ -70,7 +70,21 @@ Campaign-local operator sign-in for Silver chat administration on this site only
 
 Do not introduce Redis for a single-process deploy. Without the shared-store env pair, each process keeps its own memory maps and a logout on instance A will not revoke a stolen cookie presented to instance B.
 
-This login never grants Primewayz Host Admin, platform Owner, or cross-tenant authorization. Tenant ids are not accepted from the client as authorization. Integration Bearer tokens stay out of the browser and out of this login flow. Conversation inbox/reply/presence stay unimplemented until a Silver-specific central integration credential and scopes are available. The public widget and membership deep links are unchanged.
+This login never grants Primewayz Host Admin, platform Owner, or cross-tenant authorization. Tenant ids are not accepted from the client as authorization. Integration Bearer tokens stay out of the browser and out of this login flow. The public widget and membership deep links are unchanged.
+
+### Silver conversation operations (server-only)
+
+Authenticated operators may use `/api/admin/chat/*` once a Host-bound ops credential is configured. These routes call the existing central Primewayz operational chat contract; they do not create a parallel chat backend.
+
+| Variable | Purpose |
+|---|---|
+| `CHAT_INTEGRATION_API_BASE_URL` | Central API origin (`https://uk.primewayz.com`). Server-only. |
+| `RRB_SILVER_CHAT_INTEGRATION_TOKEN` | Ops Bearer for dashboard / conversation / reply / resolve / reopen / diagnostics. Bound centrally to `rrb-silver-campaign`. |
+| `RRB_SILVER_CHAT_CONNECT_CREDENTIAL` | Optional on this host. Chat Connect installation credential (`cck_….ccs_…`) for Host lifecycle activate/heartbeat only. **Not** used by ordinary operator routes. |
+
+The ops Bearer and the Chat Connect installation credential are **independently required** for a complete Connect installation: conversation ops need the Bearer; Host provisioning/activation needs the installation credential. `conversationOps` reports `ready` only after an authenticated, tenant-validated central diagnostics response — never from env presence alone. Archive, delete, and presence mutation are not exposed.
+
+This administration interface is **not production-ready** until unresolved campaign admin-auth hardening findings are closed (shared multi-instance session revocation and login throttle). See `specs/pw-chat-silver-connect-02/`.
 
 ### Generate credentials (do not commit real values)
 
