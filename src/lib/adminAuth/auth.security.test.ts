@@ -39,17 +39,17 @@ async function loadRoutes() {
 describe("admin auth security", () => {
   let passwordHash = "";
 
-  beforeEach(() => {
+  beforeEach(async () => {
     passwordHash = hashPassword(PASSWORD);
     installEnv(passwordHash);
-    clearLoginThrottleForTests();
-    clearRevokedSessionsForTests();
+    await clearLoginThrottleForTests();
+    await clearRevokedSessionsForTests();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllEnvs();
-    clearLoginThrottleForTests();
-    clearRevokedSessionsForTests();
+    await clearLoginThrottleForTests();
+    await clearRevokedSessionsForTests();
   });
 
   it("logs in with valid credentials and issues a session cookie", async () => {
@@ -176,7 +176,6 @@ describe("admin auth security", () => {
           headers: {
             "content-type": "application/json",
             origin: "https://join.example.test",
-            "x-forwarded-for": "198.51.100.20",
             [ADMIN_CSRF_HEADER]: csrf,
             cookie: cookieHeader({ [ADMIN_CSRF_COOKIE]: csrf }),
           },
@@ -189,6 +188,33 @@ describe("admin auth security", () => {
       expect((await attempt()).status).toBe(401);
     }
     expect((await attempt()).status).toBe(429);
+  });
+
+  it("does not let spoofed X-Forwarded-For bypass login throttling", async () => {
+    const { login } = await loadRoutes();
+    const csrf = createCsrfToken(SECRET);
+
+    async function attempt(forwardedFor: string) {
+      return login.POST(
+        new Request("https://join.example.test/api/admin/auth/login", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "https://join.example.test",
+            "x-forwarded-for": forwardedFor,
+            [ADMIN_CSRF_HEADER]: csrf,
+            cookie: cookieHeader({ [ADMIN_CSRF_COOKIE]: csrf }),
+          },
+          body: JSON.stringify({ username: USERNAME, password: "wrong", csrfToken: csrf }),
+        }),
+      );
+    }
+
+    for (let i = 0; i < 5; i += 1) {
+      expect((await attempt(`198.51.100.${i}`)).status).toBe(401);
+    }
+    // Without CHAT_ADMIN_TRUST_PROXY, spoofed headers must share one bucket.
+    expect((await attempt("198.51.100.99")).status).toBe(429);
   });
 
   it("logs out, revokes the session, and clears the cookie", async () => {

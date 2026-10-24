@@ -45,6 +45,9 @@ npm run lint
 | `CHAT_ADMIN_USERNAME` | unset | Server-only. Single campaign operator username for `/admin`. Never `NEXT_PUBLIC_`. |
 | `CHAT_ADMIN_PASSWORD_HASH` | unset | Server-only. scrypt PHC-style password hash (not plaintext). See generation procedure below. |
 | `CHAT_ADMIN_SESSION_SECRET` | unset | Server-only. ≥32-byte secret used to HMAC-sign the admin session cookie and CSRF tokens. |
+| `CHAT_ADMIN_TRUST_PROXY` | unset | Server-only. Set to `1`/`true` only when the edge proxy overwrites/strips client `X-Forwarded-For` (and optionally sets `X-Real-IP`). When unset, login throttling ignores those headers so spoofed values cannot mint fresh buckets. |
+| `CHAT_ADMIN_SHARED_STORE_URL` | unset | Server-only. Optional Upstash-compatible Redis REST URL (`https` only). Required with the token below before running more than one Node instance. |
+| `CHAT_ADMIN_SHARED_STORE_TOKEN` | unset | Server-only. Bearer token for the shared Redis REST store. Leave unset for single-process memory state. |
 
 Shared chat is off unless it is explicitly enabled and both URLs are valid. Primewayz Infotech operates the chat service. The public API host remains `https://uk.primewayz.com`; that hostname is the technical endpoint, not the visitor-facing brand. The service owns tenant configuration, conversations, sessions, replies, leads and administration. This page only loads the public widget. It does not proxy chat traffic and it does not ship administrative credentials. The Silver site key is `rentreadbuy-silver` (tenant `rrb-silver-campaign`); do not reuse the general `rrb` or `pw-uk` tenants.
 
@@ -56,7 +59,16 @@ See `.env.example` for a template.
 
 ## Silver chat operator login (`/admin`)
 
-Campaign-local operator sign-in for Silver chat administration on this site only. It uses an HMAC-signed httpOnly session cookie (`rrb_silver_chat_admin_session`) with `Path=/` so the same cookie covers both `/admin` pages and `/api/admin/*` auth APIs (a cookie may only declare one path prefix). Sessions expire after 8 hours and are revoked on logout (in-process revocation map; multi-instance deploys need a shared store before scaling). State-changing requests require a matching CSRF double-submit token and a same-origin `Origin`/`Referer`. Login attempts are throttled per IP in-process (5 failures / 15 minutes).
+Campaign-local operator sign-in for Silver chat administration on this site only. It uses an HMAC-signed httpOnly session cookie (`rrb_silver_chat_admin_session`) with `Path=/` so the same cookie covers both `/admin` pages and `/api/admin/*` auth APIs (a cookie may only declare one path prefix). Sessions expire after 8 hours and are revoked on logout. Logout navigation runs only after the logout API succeeds. State-changing requests require a matching CSRF double-submit token and a same-origin `Origin`/`Referer`. Login attempts are throttled (5 failures / 15 minutes) using a non-spoofable key unless `CHAT_ADMIN_TRUST_PROXY` is enabled behind a stripping edge.
+
+### Deployment requirements for auth state
+
+| Topology | Shared store | Trust proxy |
+|---|---|---|
+| Single Node process (`next start` / one container) | Optional. Default in-memory revocation + throttle is enough. | Optional. Leave unset unless a reverse proxy overwrites client forwarding headers. |
+| Multiple Node instances / serverless replicas | **Required.** Set `CHAT_ADMIN_SHARED_STORE_URL` + `CHAT_ADMIN_SHARED_STORE_TOKEN` to an Upstash-compatible Redis REST endpoint so logout revocation and login throttling are visible on every instance. | Set `CHAT_ADMIN_TRUST_PROXY=1` only when the platform edge overwrites `X-Forwarded-For` (for example nginx `real_ip` / Vercel). |
+
+Do not introduce Redis for a single-process deploy. Without the shared-store env pair, each process keeps its own memory maps and a logout on instance A will not revoke a stolen cookie presented to instance B.
 
 This login never grants Primewayz Host Admin, platform Owner, or cross-tenant authorization. Tenant ids are not accepted from the client as authorization. Integration Bearer tokens stay out of the browser and out of this login flow. Conversation inbox/reply/presence stay unimplemented until a Silver-specific central integration credential and scopes are available. The public widget and membership deep links are unchanged.
 

@@ -5,6 +5,7 @@ import {
   ADMIN_SESSION_TTL_SECONDS,
   CAMPAIGN_OPERATOR_ROLE,
 } from "./constants";
+import { getAdminAuthSharedStore } from "./sharedStore";
 
 export type AdminSessionPayload = {
   v: 1;
@@ -25,28 +26,20 @@ export type AdminSessionPayload = {
 
 export type VerifiedAdminSession = AdminSessionPayload;
 
-/** In-process revocation set. Multi-instance deploys need a shared store. */
-const revokedUntil = new Map<string, number>();
-
-function sweepRevoked(nowSec: number): void {
-  for (const [sid, until] of revokedUntil) {
-    if (until <= nowSec) revokedUntil.delete(sid);
-  }
+export async function revokeSession(sid: string, expUnixSec: number): Promise<void> {
+  await getAdminAuthSharedStore().revokeSession(sid, expUnixSec);
 }
 
-export function revokeSession(sid: string, expUnixSec: number): void {
-  revokedUntil.set(sid, expUnixSec);
+export async function isSessionRevoked(
+  sid: string,
+  nowUnixSec = Math.floor(Date.now() / 1000),
+): Promise<boolean> {
+  return getAdminAuthSharedStore().isSessionRevoked(sid, nowUnixSec);
 }
 
-export function isSessionRevoked(sid: string, nowUnixSec = Math.floor(Date.now() / 1000)): boolean {
-  sweepRevoked(nowUnixSec);
-  const until = revokedUntil.get(sid);
-  return typeof until === "number" && until > nowUnixSec;
-}
-
-/** Test helper: clear revocation registry. */
-export function clearRevokedSessionsForTests(): void {
-  revokedUntil.clear();
+/** Test helper: clear revocation registry in the active shared store. */
+export async function clearRevokedSessionsForTests(): Promise<void> {
+  await getAdminAuthSharedStore().clearAll();
 }
 
 function sign(body: string, secret: string): string {
@@ -79,11 +72,11 @@ export function createSessionToken(
   return { token: `${body}.${mac}`, payload };
 }
 
-export function verifySessionToken(
+export async function verifySessionToken(
   token: string | undefined | null,
   secret: string,
   nowUnixSec = Math.floor(Date.now() / 1000),
-): VerifiedAdminSession | null {
+): Promise<VerifiedAdminSession | null> {
   if (!token || typeof token !== "string") return null;
   const parts = token.split(".");
   if (parts.length !== 2) return null;
@@ -115,7 +108,7 @@ export function verifySessionToken(
 
   if (!Number.isFinite(p.exp) || p.exp <= nowUnixSec) return null;
   if (!Number.isFinite(p.iat) || p.iat > nowUnixSec + 60) return null;
-  if (isSessionRevoked(p.sid, nowUnixSec)) return null;
+  if (await isSessionRevoked(p.sid, nowUnixSec)) return null;
 
   return {
     v: 1,

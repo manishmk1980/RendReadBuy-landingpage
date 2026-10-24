@@ -137,6 +137,12 @@
   color: var(--color-ink-muted);
 }
 
+.logoutWrap {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: end;
+}
+
 .ghost {
   font: inherit;
   font-size: var(--text-sm);
@@ -155,4 +161,9 @@
 .ghost:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.ghost:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }

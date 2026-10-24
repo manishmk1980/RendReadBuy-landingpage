@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const session = getVerifiedAdminSessionFromRequest(request);
+  const session = await getVerifiedAdminSessionFromRequest(request);
   if (!session) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }

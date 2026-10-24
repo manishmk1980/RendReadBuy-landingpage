@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIpFromHeaders(request.headers);
-  if (isLoginThrottled(ip)) {
+  if (await isLoginThrottled(ip)) {
     return jsonError(429, "Too many failed login attempts. Try again later.");
   }
 
@@ -66,11 +66,11 @@ export async function POST(request: Request) {
   const passOk = verifyPassword(password, config.passwordHash);
 
   if (!userOk || !passOk) {
-    recordLoginFailure(ip);
+    await recordLoginFailure(ip);
     return jsonError(401, "Invalid credentials.");
   }
 
-  clearLoginFailures(ip);
+  await clearLoginFailures(ip);
 
   const { token, payload } = createSessionToken(config.username, config.sessionSecret);
   const secure = isSecureRequest(request);

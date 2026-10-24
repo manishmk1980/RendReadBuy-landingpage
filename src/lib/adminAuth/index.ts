@@ -39,6 +39,7 @@ export {
   clearLoginThrottleForTests,
   clientIpFromHeaders,
   isLoginThrottled,
+  isTrustedProxyEnabled,
   recordLoginFailure,
 } from "./rateLimit";
 export { requireAdminPageSession } from "./requireAdmin";
@@ -53,3 +54,12 @@ export {
   type AdminSessionPayload,
   type VerifiedAdminSession,
 } from "./session";
+export {
+  createMemorySharedStore,
+  createRedisRestSharedStore,
+  getAdminAuthSharedStore,
+  readSharedStoreConfig,
+  resetAdminAuthSharedStoreFromEnv,
+  setAdminAuthSharedStoreForTests,
+  type AdminAuthSharedStore,
+} from "./sharedStore";
