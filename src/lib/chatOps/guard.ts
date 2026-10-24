@@ -18,12 +18,14 @@ export type AdminChatContext = {
  * Does not probe central readiness — callers that need ready must probe separately
  * or rely on callCentralChatOps tenant validation.
  */
-export function requireAdminChatContext(request: Request): AdminChatContext {
+export async function requireAdminChatContext(
+  request: Request,
+): Promise<AdminChatContext> {
   if (!isAdminAuthConfigured()) {
     throw new ChatOpsError(503, "not_configured", "Admin auth is not configured.");
   }
 
-  const session = getVerifiedAdminSessionFromRequest(request);
+  const session = await getVerifiedAdminSessionFromRequest(request);
   if (!session) {
     throw new ChatOpsError(401, "unauthorized", "Authentication required.");
   }
@@ -41,10 +43,10 @@ export function requireAdminChatContext(request: Request): AdminChatContext {
 }
 
 /** CSRF + Origin for state-changing admin chat routes. */
-export function requireAdminChatMutation(
+export async function requireAdminChatMutation(
   request: Request,
   submittedCsrf?: string | null,
-): AdminChatContext {
+): Promise<AdminChatContext> {
   const csrf =
     submittedCsrf !== undefined
       ? guardAdminMutationWithToken(request, submittedCsrf)

@@ -39,10 +39,10 @@ export async function getVerifiedAdminSession(
   return verifySessionToken(token, config.sessionSecret, nowUnixSec);
 }
 
-export function getVerifiedAdminSessionFromRequest(
+export async function getVerifiedAdminSessionFromRequest(
   request: Request,
   nowUnixSec = Math.floor(Date.now() / 1000),
-): VerifiedAdminSession | null {
+): Promise<VerifiedAdminSession | null> {
   const config = requireAdminAuthConfig();
   if (!config) return null;
   const cookieHeader = request.headers.get("cookie") ?? "";

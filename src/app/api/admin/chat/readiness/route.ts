@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const session = getVerifiedAdminSessionFromRequest(request);
+    const session = await getVerifiedAdminSessionFromRequest(request);
     if (!session) {
       return chatOpsJson(
         {
@@ -47,9 +47,8 @@ export async function GET(request: Request) {
       conversationOps: readiness.status,
       ready: readiness.ready,
       /**
-       * Campaign admin auth still has unresolved hardening items
-       * (in-process session revocation / login throttle). Do not treat
-       * this console as production-ready until those are resolved.
+       * Conservative until Host confirms single-process deploy or configures
+       * CHAT_ADMIN_SHARED_STORE_* for multi-instance revocation/throttling.
        */
       productionReady: false,
       config: readiness.config,

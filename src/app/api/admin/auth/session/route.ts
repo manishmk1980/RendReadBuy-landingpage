@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const session = getVerifiedAdminSessionFromRequest(request);
+  const session = await getVerifiedAdminSessionFromRequest(request);
   if (!session) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
@@ -55,8 +55,8 @@ export async function GET(request: Request) {
      */
     connectCredentialConfigured: configStatus.connectCredentialConfigured,
     /**
-     * Unresolved admin-auth hardening (in-process revocation/throttle) means
-     * this console must not be treated as production-ready yet.
+     * Conservative until Host confirms single-process deploy or configures
+     * CHAT_ADMIN_SHARED_STORE_* for multi-instance revocation/throttling.
      */
     productionReady: false,
   });

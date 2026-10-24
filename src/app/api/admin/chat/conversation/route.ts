@@ -9,7 +9,7 @@ import {
 /** Conversation detail / transcript. */
 export async function GET(request: Request) {
   try {
-    const { config } = requireAdminChatContext(request);
+    const { config } = await requireAdminChatContext(request);
     const url = new URL(request.url);
     const sessionId = url.searchParams.get("sessionId")?.trim() ?? "";
     if (!sessionId || sessionId.length > 191) {

@@ -8,7 +8,7 @@ import {
 /** Read-only central diagnostics. GET only — no CSRF required. */
 export async function GET(request: Request) {
   try {
-    const { config } = requireAdminChatContext(request);
+    const { config } = await requireAdminChatContext(request);
     const envelope = await callCentralChatOps({
       config,
       body: { action: "diagnostics" },

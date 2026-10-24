@@ -44,16 +44,16 @@ async function loadChatRoutes() {
 describe("admin chat authorization", () => {
   let passwordHash = "";
 
-  beforeEach(() => {
+  beforeEach(async () => {
     passwordHash = hashPassword(PASSWORD);
     installAdminEnv(passwordHash);
-    clearRevokedSessionsForTests();
+    await clearRevokedSessionsForTests();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-    clearRevokedSessionsForTests();
+    await clearRevokedSessionsForTests();
   });
 
   it("rejects unauthenticated dashboard access", async () => {

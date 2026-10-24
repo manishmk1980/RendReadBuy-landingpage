@@ -16,12 +16,14 @@ function readCsrfCookie(): string | null {
 export function LogoutButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onLogout() {
     setPending(true);
+    setError(null);
     const csrfToken = readCsrfCookie();
     try {
-      await fetch("/api/admin/auth/logout", {
+      const response = await fetch("/api/admin/auth/logout", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -30,16 +32,32 @@ export function LogoutButton() {
         body: JSON.stringify({ csrfToken }),
         credentials: "same-origin",
       });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? "Sign-out failed. Session may still be active.");
+        setPending(false);
+        return;
+      }
+
+      router.replace("/admin/login");
+      router.refresh();
     } catch {
-      // Still clear local navigation; server revocation happens when the call succeeds.
+      setError("Sign-out failed. Check your connection and try again.");
+      setPending(false);
     }
-    router.replace("/admin/login");
-    router.refresh();
   }
 
   return (
-    <button className={styles.ghost} type="button" onClick={onLogout} disabled={pending}>
-      {pending ? "Signing out…" : "Log out"}
-    </button>
+    <div className={styles.logoutWrap}>
+      <button className={styles.ghost} type="button" onClick={onLogout} disabled={pending}>
+        {pending ? "Signing out…" : "Log out"}
+      </button>
+      {error ? (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

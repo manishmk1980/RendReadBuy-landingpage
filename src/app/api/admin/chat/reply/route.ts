@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     const csrf =
       typeof body.csrfToken === "string" ? body.csrfToken : undefined;
-    const { session, config } = requireAdminChatMutation(request, csrf);
+    const { session, config } = await requireAdminChatMutation(request, csrf);
 
     const sessionId =
       typeof body.sessionId === "string" ? body.sessionId.trim() : "";

@@ -33,12 +33,12 @@ export async function POST(request: Request) {
     return jsonError(guard.status, guard.error);
   }
 
-  const session = getVerifiedAdminSessionFromRequest(request);
+  const session = await getVerifiedAdminSessionFromRequest(request);
   if (!session) {
     return jsonError(401, "Authentication required.");
   }
 
-  revokeSession(session.sid, session.exp);
+  await revokeSession(session.sid, session.exp);
 
   const secure = isSecureRequest(request);
   const sessionCookie = clearedSessionCookieOptions(secure);
