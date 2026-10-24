@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { requireAdminAuthConfig } from "./config";
+import { ADMIN_CSRF_TTL_SECONDS } from "./constants";
 import {
   ADMIN_CSRF_COOKIE,
   ADMIN_CSRF_HEADER,
@@ -125,12 +126,16 @@ export function guardAdminMutationWithToken(
   return { ok: true };
 }
 
+/**
+ * Sets the CSRF cookie via next/headers cookies().
+ * Only call from Route Handlers or Server Actions — not during RSC render.
+ */
 export async function issueCsrfCookie(secure: boolean): Promise<string | null> {
   const config = requireAdminAuthConfig();
   if (!config) return null;
   const token = createCsrfToken(config.sessionSecret);
   const jar = await cookies();
-  const opts = csrfCookieOptions(60 * 60, secure);
+  const opts = csrfCookieOptions(ADMIN_CSRF_TTL_SECONDS, secure);
   jar.set(opts.name, token, {
     httpOnly: opts.httpOnly,
     sameSite: opts.sameSite,
