@@ -1,7 +1,8 @@
 import { connection } from "next/server";
 import { Suspense, type ReactNode } from "react";
-import { issueCsrfCookie, requireAdminPageSession } from "@/lib/adminAuth";
+import { requireAdminPageSession } from "@/lib/adminAuth";
 import styles from "../admin.module.css";
+import { CsrfBootstrap } from "./CsrfBootstrap";
 import { LogoutButton } from "./LogoutButton";
 
 export const instant = false;
@@ -9,11 +10,11 @@ export const instant = false;
 async function ProtectedChrome({ children }: { children: ReactNode }) {
   await connection();
   const session = await requireAdminPageSession();
-  // Refresh CSRF so logout and future mutations can double-submit.
-  await issueCsrfCookie(process.env.NODE_ENV === "production");
 
   return (
     <>
+      {/* CSRF cookie is issued by Route Handler — not during RSC render. */}
+      <CsrfBootstrap />
       <div className={styles.meta}>
         <p className={styles.operator}>
           Signed in as <strong>{session.sub}</strong>

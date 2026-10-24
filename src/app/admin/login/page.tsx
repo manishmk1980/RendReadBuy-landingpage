@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { isAdminAuthConfigured, issueCsrfCookie } from "@/lib/adminAuth";
+import { isAdminAuthConfigured } from "@/lib/adminAuth";
 import styles from "../admin.module.css";
 import { LoginForm } from "./LoginForm";
 
@@ -27,7 +27,6 @@ async function LoginPanel({
 }) {
   await connection();
   const configured = isAdminAuthConfigured();
-  const csrfToken = configured ? await issueCsrfCookie(process.env.NODE_ENV === "production") : null;
   const params = await searchParams;
   const raw = params.error;
   const errorCode = Array.isArray(raw) ? raw[0] : raw;
@@ -42,7 +41,7 @@ async function LoginPanel({
         Silver chat administration for this campaign site. Credentials stay on the server;
         this login does not grant RentReadBuy Host or platform Owner access.
       </p>
-      <LoginForm csrfToken={csrfToken} configured={configured} initialError={initialError} />
+      <LoginForm configured={configured} initialError={initialError} />
     </section>
   );
 }

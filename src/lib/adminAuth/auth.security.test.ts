@@ -30,10 +30,17 @@ function cookieHeader(parts: Record<string, string>): string {
 
 async function loadRoutes() {
   vi.resetModules();
+  const csrf = await import("@/app/api/admin/auth/csrf/route");
   const login = await import("@/app/api/admin/auth/login/route");
   const logout = await import("@/app/api/admin/auth/logout/route");
   const session = await import("@/app/api/admin/auth/session/route");
-  return { login, logout, session };
+  return { csrf, login, logout, session };
+}
+
+function setCookieHeader(response: Response): string {
+  const multi = response.headers.getSetCookie?.() ?? [];
+  if (multi.length) return multi.join("\n");
+  return String(response.headers.get("set-cookie") ?? "");
 }
 
 describe("admin auth security", () => {
@@ -52,6 +59,118 @@ describe("admin auth security", () => {
     await clearRevokedSessionsForTests();
   });
 
+  it("issues a CSRF cookie and token from the init route (not RSC render)", async () => {
+    const { csrf } = await loadRoutes();
+    const response = await csrf.GET(
+      new Request("https://join.example.test/api/admin/auth/csrf", {
+        method: "GET",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+
+    const body = (await response.json()) as { csrfToken?: string; configured?: boolean };
+    expect(body.configured).toBe(true);
+    expect(typeof body.csrfToken).toBe("string");
+    expect(body.csrfToken!.length).toBeGreaterThan(16);
+
+    const joined = setCookieHeader(response);
+    expect(joined).toContain(ADMIN_CSRF_COOKIE);
+    expect(joined).toContain(body.csrfToken);
+    expect(joined).toMatch(/Path=\//i);
+    expect(joined).toMatch(/SameSite=Lax/i);
+    expect(joined).not.toMatch(/HttpOnly/i);
+  });
+
+  it("rejects CSRF init when admin auth is not configured and never caches", async () => {
+    vi.stubEnv("CHAT_ADMIN_USERNAME", "");
+    vi.stubEnv("CHAT_ADMIN_PASSWORD_HASH", "");
+    vi.stubEnv("CHAT_ADMIN_SESSION_SECRET", "");
+    const { csrf } = await loadRoutes();
+    const response = await csrf.GET(
+      new Request("https://join.example.test/api/admin/auth/csrf", {
+        method: "GET",
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    const body = (await response.json()) as { configured?: boolean; csrfToken?: string };
+    expect(body.configured).toBe(false);
+    expect(body.csrfToken).toBeUndefined();
+  });
+
+  it("accepts login when CSRF cookie matches the token from the init route", async () => {
+    const { csrf, login } = await loadRoutes();
+    const init = await csrf.GET(
+      new Request("https://join.example.test/api/admin/auth/csrf", {
+        method: "GET",
+      }),
+    );
+    const { csrfToken } = (await init.json()) as { csrfToken: string };
+
+    const response = await login.POST(
+      new Request("https://join.example.test/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://join.example.test",
+          [ADMIN_CSRF_HEADER]: csrfToken,
+          cookie: cookieHeader({ [ADMIN_CSRF_COOKIE]: csrfToken }),
+        },
+        body: JSON.stringify({
+          username: USERNAME,
+          password: PASSWORD,
+          csrfToken,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const joined = setCookieHeader(response);
+    expect(joined).toContain(ADMIN_SESSION_COOKIE);
+    expect(joined).toMatch(/Path=\//i);
+    expect(joined).toMatch(/HttpOnly/i);
+  });
+
+  it("rejects login when CSRF token is missing", async () => {
+    const { login } = await loadRoutes();
+    const response = await login.POST(
+      new Request("https://join.example.test/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://join.example.test",
+        },
+        body: JSON.stringify({ username: USERNAME, password: PASSWORD }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toMatch(/csrf/i);
+  });
+
+  it("rejects login when CSRF cookie and body token disagree", async () => {
+    const { login } = await loadRoutes();
+    const submitted = createCsrfToken(SECRET);
+    const cookieOnly = createCsrfToken(SECRET);
+    const response = await login.POST(
+      new Request("https://join.example.test/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://join.example.test",
+          [ADMIN_CSRF_HEADER]: submitted,
+          cookie: cookieHeader({ [ADMIN_CSRF_COOKIE]: cookieOnly }),
+        },
+        body: JSON.stringify({
+          username: USERNAME,
+          password: PASSWORD,
+          csrfToken: submitted,
+        }),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
   it("logs in with valid credentials and issues a session cookie", async () => {
     const { login } = await loadRoutes();
     const csrf = createCsrfToken(SECRET);
@@ -68,8 +187,7 @@ describe("admin auth security", () => {
       }),
     );
     expect(response.status).toBe(200);
-    const setCookie = response.headers.getSetCookie?.() ?? [];
-    const joined = setCookie.length ? setCookie.join("\n") : String(response.headers.get("set-cookie") ?? "");
+    const joined = setCookieHeader(response);
     expect(joined).toContain(ADMIN_SESSION_COOKIE);
     expect(joined).toMatch(/Path=\//i);
     expect(joined).toMatch(/HttpOnly/i);
