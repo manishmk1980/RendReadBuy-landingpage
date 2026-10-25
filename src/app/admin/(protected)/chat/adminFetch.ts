@@ -22,13 +22,21 @@ type ErrorBody = {
   error?: { message?: string };
 };
 
-async function readBody<T>(response: Response): Promise<T> {
+async function readBody<T>(
+  response: Response,
+): Promise<{ status: number; body: T }> {
   try {
-    return (await response.json()) as T;
+    const body = (await response.json()) as T;
+    return { status: response.status, body };
   } catch {
+    // Invalid/non-JSON bodies must never look like success — even on HTTP 2xx —
+    // or callers would confirm presence transitions / mutations incorrectly.
     return {
-      error: { message: "The server returned an unreadable response." },
-    } as T;
+      status: response.ok ? 0 : response.status,
+      body: {
+        error: { message: "The server returned an unreadable response." },
+      } as T,
+    };
   }
 }
 
@@ -54,8 +62,7 @@ export async function adminGet<T>(
       cache: "no-store",
       signal: init?.signal,
     });
-    const body = await readBody<T>(response);
-    return { status: response.status, body };
+    return await readBody<T>(response);
   } catch (error) {
     if (isAbortError(error)) throw error;
     return { status: 0, body: networkFailureBody<T>() };
@@ -84,8 +91,7 @@ export async function adminMutate<T>(
       body: JSON.stringify({ ...payload, csrfToken }),
       signal: init?.signal,
     });
-    const body = await readBody<T>(response);
-    return { status: response.status, body };
+    return await readBody<T>(response);
   } catch (error) {
     if (isAbortError(error)) throw error;
     return { status: 0, body: networkFailureBody<T>() };

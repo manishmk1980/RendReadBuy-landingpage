@@ -313,10 +313,11 @@ export function OperatorConsole() {
       setPresenceSuccess("You are Online for this console tab.");
       startHeartbeatLoop();
     } finally {
-      if (epoch === presenceEpochRef.current) {
-        presenceBusyRef.current = false;
-        setPresenceBusy(false);
-      }
+      // Always release the transition lock — epoch bumps (e.g. 401) must not
+      // leave presenceBusy stuck and block retries. Stale-response guards above
+      // still skip applying Online/Offline confirmation when superseded.
+      presenceBusyRef.current = false;
+      setPresenceBusy(false);
     }
   }, [sendHeartbeat, startHeartbeatLoop]);
 
@@ -342,10 +343,9 @@ export function OperatorConsole() {
       setOnline(false);
       setPresenceSuccess("You are Offline for this console tab.");
     } finally {
-      if (epoch === presenceEpochRef.current) {
-        presenceBusyRef.current = false;
-        setPresenceBusy(false);
-      }
+      // Always release the transition lock — see goOnline finally.
+      presenceBusyRef.current = false;
+      setPresenceBusy(false);
     }
   }, [sendOffline, startHeartbeatLoop, stopHeartbeatLoop]);
 

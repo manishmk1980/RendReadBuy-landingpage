@@ -260,6 +260,174 @@ describe("OperatorConsole WS-5 IA", () => {
     ).toBe(true);
   });
 
+  it("releases presence busy after HTTP 401 on Go Online so retry can succeed", async () => {
+    let heartbeatCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/presence/heartbeat")) {
+        heartbeatCalls += 1;
+        if (heartbeatCalls === 1) {
+          return jsonResponse(
+            { error: { message: "Authentication required." } },
+            401,
+          );
+        }
+        return jsonResponse({
+          ok: true,
+          contributing: true,
+          expiresInMs: 300_000,
+          presencePolicy: "legacy",
+        });
+      }
+      if (url.includes("/presence/offline")) {
+        return jsonResponse({ ok: true, cleared: 1 });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/session expired/i);
+    });
+    const retryButton = screen.getByRole("button", { name: /go online/i });
+    expect(retryButton).toBeTruthy();
+    expect(retryButton.getAttribute("aria-busy")).not.toBe("true");
+    expect((retryButton as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: /go offline/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /updating/i })).toBeNull();
+
+    fireEvent.click(retryButton);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /go offline/i })).toBeTruthy();
+    });
+    expect(heartbeatCalls).toBe(2);
+  });
+
+  it("does not confirm Online when heartbeat returns non-JSON HTTP 200", async () => {
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/presence/heartbeat")) {
+        return new Response("<html>gateway</html>", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        });
+      }
+      if (url.includes("/presence/offline")) {
+        return jsonResponse({ ok: true, cleared: 1 });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/unreadable|heartbeat failed|network/i);
+    });
+    expect(screen.getByRole("button", { name: /go online/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /go offline/i })).toBeNull();
+  });
+
+  it("does not treat non-JSON HTTP 200 reply as a successful mutation", async () => {
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      const init = args[1] as RequestInit | undefined;
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            recentConversations: [
+              {
+                sessionId: "sess-1",
+                status: "open",
+                visitorLabel: "Jordan",
+                intent: "silver-membership",
+                needsAttention: true,
+                lastActivityAt: new Date().toISOString(),
+              },
+            ],
+          },
+        });
+      }
+      if (url.includes("/conversation")) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            sessionId: "sess-1",
+            status: "open",
+            visitorLabel: "Jordan",
+            messages: [{ id: "m1", role: "visitor", text: "Can I join?" }],
+          },
+        });
+      }
+      if (url.includes("/reply") && init?.method === "POST") {
+        return new Response("thanks", {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Conversations" }));
+    await waitFor(() => {
+      expect(screen.getByText(/Jordan/)).toBeTruthy();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Jordan/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText(/reply/i)).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText(/reply/i), {
+      target: { value: "Hello from ops" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send reply/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/unreadable|reply failed/i);
+    });
+    expect(screen.queryByText(/reply sent/i)).toBeNull();
+  });
+
   it("does not flip to Offline until the offline API succeeds", async () => {
     let offlineCalls = 0;
     const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
