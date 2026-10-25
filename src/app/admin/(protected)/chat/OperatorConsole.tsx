@@ -10,7 +10,13 @@ import {
 } from "react";
 import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
 import styles from "../../admin.module.css";
-import { adminGet, adminMutate, readCsrfCookie } from "./adminFetch";
+import {
+  adminGet,
+  adminMutate,
+  errorMessage,
+  isAbortError,
+  readCsrfCookie,
+} from "./adminFetch";
 import {
   type ConversationData,
   type DashboardConversation,
@@ -85,8 +91,31 @@ const SURFACES: { id: AdminSurface; label: string }[] = [
   { id: "diagnostics", label: "Diagnostics" },
 ];
 
+const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
+  { id: "active", label: "Active" },
+  { id: "archived", label: "Archived (read)" },
+];
+
+function moveIndex(
+  index: number,
+  length: number,
+  key: string,
+): number | null {
+  if (length <= 0 || index < 0) return null;
+  if (key === "ArrowRight" || key === "ArrowDown") {
+    return (index + 1) % length;
+  }
+  if (key === "ArrowLeft" || key === "ArrowUp") {
+    return (index - 1 + length) % length;
+  }
+  if (key === "Home") return 0;
+  if (key === "End") return length - 1;
+  return null;
+}
+
 export function OperatorConsole() {
   const tabListId = useId();
+  const inboxTabListId = useId();
   const [surface, setSurface] = useState<AdminSurface>("overview");
   const [inbox, setInbox] = useState<InboxFilter>("active");
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
@@ -115,80 +144,28 @@ export function OperatorConsole() {
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
 
   const onlineRef = useRef(false);
+  const presenceBusyRef = useRef(false);
+  const presenceEpochRef = useRef(0);
+  const heartbeatInFlightRef = useRef(false);
   const consoleInstanceIdRef = useRef<string | null>(null);
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inboxRequestIdRef = useRef(0);
+  const conversationRequestIdRef = useRef(0);
+  const inboxAbortRef = useRef<AbortController | null>(null);
+  const conversationAbortRef = useRef<AbortController | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     onlineRef.current = online;
   }, [online]);
 
   useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
     consoleInstanceIdRef.current = getOrCreateConsoleInstanceId();
   }, []);
-
-  const sendHeartbeat = useCallback(async (): Promise<boolean> => {
-    const consoleInstanceId =
-      consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
-    consoleInstanceIdRef.current = consoleInstanceId;
-    const { status, body } = await adminMutate<PresenceResponse>(
-      "/api/admin/chat/presence/heartbeat",
-      { consoleInstanceId },
-    );
-    if (status === 401) {
-      setPresenceError("Session expired. Sign in again.");
-      setPresenceSuccess(null);
-      setOnline(false);
-      return false;
-    }
-    if (status >= 400) {
-      setPresenceError(body.error?.message ?? "Presence heartbeat failed.");
-      setPresenceSuccess(null);
-      return false;
-    }
-    setPresenceError(null);
-    setExpiresInMs(typeof body.expiresInMs === "number" ? body.expiresInMs : null);
-    const policy = body.presencePolicy ?? "unknown";
-    const degraded = body.presencePolicyDegraded ? " (policy degraded)" : "";
-    setPresenceDetail(`Contributing · policy ${policy}${degraded}`);
-    return true;
-  }, []);
-
-  const sendOffline = useCallback(
-    async (bestEffort = false): Promise<boolean> => {
-      const consoleInstanceId =
-        consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
-      try {
-        const { status, body } = await adminMutate<PresenceResponse>(
-          "/api/admin/chat/presence/offline",
-          { consoleInstanceId, notAfterMs: Date.now() },
-        );
-        if (!bestEffort && status === 401) {
-          setPresenceError("Session expired. Sign in again.");
-          setPresenceSuccess(null);
-          return false;
-        }
-        if (!bestEffort && status >= 400) {
-          setPresenceError(body.error?.message ?? "Could not go Offline.");
-          setPresenceSuccess(null);
-          return false;
-        }
-        if (status < 400) {
-          setPresenceError(null);
-          setPresenceDetail("Offline for this console tab.");
-          setExpiresInMs(null);
-          return true;
-        }
-        return bestEffort;
-      } catch {
-        if (!bestEffort) {
-          setPresenceError("Could not reach presence service.");
-          setPresenceSuccess(null);
-        }
-        return false;
-      }
-    },
-    [],
-  );
 
   const stopHeartbeatLoop = useCallback(() => {
     if (heartbeatTimerRef.current) {
@@ -197,23 +174,136 @@ export function OperatorConsole() {
     }
   }, []);
 
+  const applyConfirmedOffline = useCallback(
+    (options?: { error?: string; clearSuccess?: boolean }) => {
+      stopHeartbeatLoop();
+      setOnline(false);
+      setExpiresInMs(null);
+      setPresenceDetail("Offline for this console tab.");
+      if (options?.error) {
+        setPresenceError(options.error);
+        setPresenceSuccess(null);
+      } else if (options?.clearSuccess) {
+        setPresenceSuccess(null);
+      }
+    },
+    [stopHeartbeatLoop],
+  );
+
+  const sendHeartbeat = useCallback(
+    async (options?: { epoch?: number }): Promise<boolean> => {
+      const epoch = options?.epoch ?? presenceEpochRef.current;
+      if (heartbeatInFlightRef.current) {
+        return false;
+      }
+      heartbeatInFlightRef.current = true;
+      try {
+        const consoleInstanceId =
+          consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
+        consoleInstanceIdRef.current = consoleInstanceId;
+        const { status, body } = await adminMutate<PresenceResponse>(
+          "/api/admin/chat/presence/heartbeat",
+          { consoleInstanceId },
+        );
+        if (epoch !== presenceEpochRef.current) {
+          return false;
+        }
+        if (status === 401) {
+          presenceEpochRef.current += 1;
+          applyConfirmedOffline({
+            error: "Session expired. Sign in again.",
+          });
+          return false;
+        }
+        if (status === 0 || status >= 400) {
+          if (onlineRef.current) {
+            presenceEpochRef.current += 1;
+            applyConfirmedOffline({
+              error: errorMessage(body, "Presence heartbeat failed."),
+            });
+          } else {
+            setPresenceError(errorMessage(body, "Presence heartbeat failed."));
+            setPresenceSuccess(null);
+          }
+          return false;
+        }
+        setPresenceError(null);
+        setExpiresInMs(
+          typeof body.expiresInMs === "number" ? body.expiresInMs : null,
+        );
+        const policy = body.presencePolicy ?? "unknown";
+        const degraded = body.presencePolicyDegraded
+          ? " (policy degraded)"
+          : "";
+        setPresenceDetail(`Contributing · policy ${policy}${degraded}`);
+        return true;
+      } finally {
+        heartbeatInFlightRef.current = false;
+      }
+    },
+    [applyConfirmedOffline],
+  );
+
+  const sendOffline = useCallback(
+    async (
+      bestEffort = false,
+      options?: { epoch?: number },
+    ): Promise<boolean> => {
+      const epoch = options?.epoch ?? presenceEpochRef.current;
+      const consoleInstanceId =
+        consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
+      const { status, body } = await adminMutate<PresenceResponse>(
+        "/api/admin/chat/presence/offline",
+        { consoleInstanceId, notAfterMs: Date.now() },
+      );
+      if (epoch !== presenceEpochRef.current) {
+        return false;
+      }
+      if (!bestEffort && status === 401) {
+        setPresenceError("Session expired. Sign in again.");
+        setPresenceSuccess(null);
+        return false;
+      }
+      if (!bestEffort && (status === 0 || status >= 400)) {
+        setPresenceError(errorMessage(body, "Could not go Offline."));
+        setPresenceSuccess(null);
+        return false;
+      }
+      if (status > 0 && status < 400) {
+        setPresenceError(null);
+        setPresenceDetail("Offline for this console tab.");
+        setExpiresInMs(null);
+        return true;
+      }
+      return bestEffort;
+    },
+    [],
+  );
+
   const startHeartbeatLoop = useCallback(() => {
     stopHeartbeatLoop();
     heartbeatTimerRef.current = setInterval(() => {
-      if (!onlineRef.current) return;
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      if (!onlineRef.current || presenceBusyRef.current) return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
         return;
       }
-      void sendHeartbeat();
+      void sendHeartbeat({ epoch: presenceEpochRef.current });
     }, HEARTBEAT_INTERVAL_MS);
   }, [sendHeartbeat, stopHeartbeatLoop]);
 
   const goOnline = useCallback(async () => {
+    if (presenceBusyRef.current || onlineRef.current) return;
+    presenceBusyRef.current = true;
     setPresenceBusy(true);
     setPresenceError(null);
     setPresenceSuccess(null);
+    const epoch = ++presenceEpochRef.current;
     try {
-      const ok = await sendHeartbeat();
+      const ok = await sendHeartbeat({ epoch });
+      if (epoch !== presenceEpochRef.current) return;
       if (!ok) {
         // Stay Offline until Central confirms contribution.
         setOnline(false);
@@ -223,39 +313,56 @@ export function OperatorConsole() {
       setPresenceSuccess("You are Online for this console tab.");
       startHeartbeatLoop();
     } finally {
-      setPresenceBusy(false);
+      if (epoch === presenceEpochRef.current) {
+        presenceBusyRef.current = false;
+        setPresenceBusy(false);
+      }
     }
   }, [sendHeartbeat, startHeartbeatLoop]);
 
   const goOffline = useCallback(async () => {
+    if (presenceBusyRef.current || !onlineRef.current) return;
+    presenceBusyRef.current = true;
     setPresenceBusy(true);
     setPresenceError(null);
     setPresenceSuccess(null);
+    const epoch = ++presenceEpochRef.current;
+    // Invalidate in-flight heartbeats and pause renewals while Offline confirms.
+    stopHeartbeatLoop();
     try {
-      // Confirm server Offline before changing local Online state.
-      const ok = await sendOffline(false);
+      const ok = await sendOffline(false, { epoch });
+      if (epoch !== presenceEpochRef.current) return;
       if (!ok) {
+        // Remain Online with confirmed connectivity until Offline succeeds.
+        if (onlineRef.current) {
+          startHeartbeatLoop();
+        }
         return;
       }
-      stopHeartbeatLoop();
       setOnline(false);
       setPresenceSuccess("You are Offline for this console tab.");
     } finally {
-      setPresenceBusy(false);
+      if (epoch === presenceEpochRef.current) {
+        presenceBusyRef.current = false;
+        setPresenceBusy(false);
+      }
     }
-  }, [sendOffline, stopHeartbeatLoop]);
+  }, [sendOffline, startHeartbeatLoop, stopHeartbeatLoop]);
 
   const togglePresence = useCallback(async () => {
-    if (online) {
+    if (presenceBusyRef.current) return;
+    if (onlineRef.current) {
       await goOffline();
     } else {
       await goOnline();
     }
-  }, [goOffline, goOnline, online]);
+  }, [goOffline, goOnline]);
 
   useEffect(() => {
     const onPageHide = () => {
       if (!onlineRef.current) return;
+      presenceEpochRef.current += 1;
+      stopHeartbeatLoop();
       const consoleInstanceId =
         consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
       const csrfToken = readCsrfCookie();
@@ -268,18 +375,20 @@ export function OperatorConsole() {
         if (typeof navigator !== "undefined" && navigator.sendBeacon) {
           const blob = new Blob([payload], { type: "application/json" });
           navigator.sendBeacon("/api/admin/chat/presence/offline", blob);
+          setOnline(false);
           return;
         }
       } catch {
         // fall through to best-effort fetch
       }
-      void sendOffline(true);
+      void sendOffline(true, { epoch: presenceEpochRef.current });
+      setOnline(false);
     };
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible" && onlineRef.current) {
-        void sendHeartbeat();
-      }
+      if (document.visibilityState !== "visible") return;
+      if (!onlineRef.current || presenceBusyRef.current) return;
+      void sendHeartbeat({ epoch: presenceEpochRef.current });
     };
 
     window.addEventListener("pagehide", onPageHide);
@@ -288,29 +397,45 @@ export function OperatorConsole() {
       window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onVisibility);
       stopHeartbeatLoop();
+      inboxAbortRef.current?.abort();
+      conversationAbortRef.current?.abort();
       if (onlineRef.current) {
-        void sendOffline(true);
+        presenceEpochRef.current += 1;
+        void sendOffline(true, { epoch: presenceEpochRef.current });
       }
     };
   }, [sendHeartbeat, sendOffline, stopHeartbeatLoop]);
 
   const loadDashboard = useCallback(async (inboxFilter: InboxFilter) => {
+    inboxAbortRef.current?.abort();
+    const controller = new AbortController();
+    inboxAbortRef.current = controller;
+    const requestId = ++inboxRequestIdRef.current;
     setLoadingInbox(true);
     try {
       const { status, body } = await adminGet<{
         ok?: boolean;
         data?: DashboardData;
         error?: { message?: string };
-      }>(`/api/admin/chat/dashboard?inbox=${inboxFilter}`);
-      if (status >= 400) {
-        setError(body.error?.message ?? "Dashboard unavailable.");
+      }>(`/api/admin/chat/dashboard?inbox=${inboxFilter}`, {
+        signal: controller.signal,
+      });
+      if (requestId !== inboxRequestIdRef.current) return;
+      if (status === 0 || status >= 400) {
+        setError(errorMessage(body, "Dashboard unavailable."));
         setDashboard(null);
         return;
       }
       setDashboard(body.data ?? null);
       setError(null);
+    } catch (err) {
+      if (isAbortError(err) || requestId !== inboxRequestIdRef.current) return;
+      setError("Dashboard unavailable.");
+      setDashboard(null);
     } finally {
-      setLoadingInbox(false);
+      if (requestId === inboxRequestIdRef.current) {
+        setLoadingInbox(false);
+      }
     }
   }, []);
 
@@ -330,8 +455,8 @@ export function OperatorConsole() {
           setStarted(true);
           return;
         }
-        if (status >= 400) {
-          setError(body.error?.message ?? "Readiness check failed.");
+        if (status === 0 || status >= 400) {
+          setError(errorMessage(body, "Readiness check failed."));
           setReadiness(null);
           setDashboard(null);
           setConversation(null);
@@ -360,12 +485,17 @@ export function OperatorConsole() {
   );
 
   useEffect(() => {
+    // Session-gated readiness probe once per console entry.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once remote probe
     void refreshStatus({ announce: false });
-    // Initial probe only — avoid re-running when inbox filter changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
   }, []);
 
   const loadConversation = useCallback(async (sessionId: string) => {
+    conversationAbortRef.current?.abort();
+    const controller = new AbortController();
+    conversationAbortRef.current = controller;
+    const requestId = ++conversationRequestIdRef.current;
     setLoadingConversation(true);
     try {
       const { status, body } = await adminGet<{
@@ -374,16 +504,27 @@ export function OperatorConsole() {
         error?: { message?: string };
       }>(
         `/api/admin/chat/conversation?sessionId=${encodeURIComponent(sessionId)}`,
+        { signal: controller.signal },
       );
-      if (status >= 400) {
-        setError(body.error?.message ?? "Conversation unavailable.");
+      if (requestId !== conversationRequestIdRef.current) return;
+      if (selectedIdRef.current !== sessionId) return;
+      if (status === 0 || status >= 400) {
+        setError(errorMessage(body, "Conversation unavailable."));
         setConversation(null);
         return;
       }
       setConversation(body.data ?? null);
       setError(null);
+    } catch (err) {
+      if (isAbortError(err) || requestId !== conversationRequestIdRef.current) {
+        return;
+      }
+      setError("Conversation unavailable.");
+      setConversation(null);
     } finally {
-      setLoadingConversation(false);
+      if (requestId === conversationRequestIdRef.current) {
+        setLoadingConversation(false);
+      }
     }
   }, []);
 
@@ -399,8 +540,8 @@ export function OperatorConsole() {
         setDiagnostics(null);
         return;
       }
-      if (status >= 400) {
-        setDiagnosticsError(body.error?.message ?? "Diagnostics unavailable.");
+      if (status === 0 || status >= 400) {
+        setDiagnosticsError(errorMessage(body, "Diagnostics unavailable."));
         setDiagnostics(null);
         return;
       }
@@ -410,23 +551,27 @@ export function OperatorConsole() {
     }
   }, []);
 
-  useEffect(() => {
-    if (surface === "diagnostics" && !diagnostics && !diagnosticsLoading) {
-      void loadDiagnostics();
-    }
-  }, [diagnostics, diagnosticsLoading, loadDiagnostics, surface]);
+  const openSurface = useCallback(
+    (next: AdminSurface) => {
+      setSurface(next);
+      // One automatic fetch per surface entry — never tied to loading/error
+      // state, so HTTP/network failures cannot retrigger themselves.
+      if (next === "diagnostics") {
+        void loadDiagnostics();
+      }
+      if (next === "conversations" && readiness?.ready) {
+        void loadDashboard(inbox);
+      }
+    },
+    [inbox, loadDashboard, loadDiagnostics, readiness?.ready],
+  );
 
-  useEffect(() => {
-    if (surface === "conversations" && readiness?.ready) {
-      void loadDashboard(inbox);
-    }
-  }, [inbox, loadDashboard, readiness?.ready, surface]);
-
-  async function onSelect(sessionId: string) {
+  function onSelect(sessionId: string) {
     setSelectedId(sessionId);
+    selectedIdRef.current = sessionId;
     setReplyText("");
     setSuccess(null);
-    await loadConversation(sessionId);
+    void loadConversation(sessionId);
   }
 
   async function onReply() {
@@ -440,8 +585,8 @@ export function OperatorConsole() {
         sessionId: selectedId,
         text: replyText.trim(),
       });
-      if (status >= 400) {
-        setError(body.error?.message ?? "Reply failed.");
+      if (status === 0 || status >= 400) {
+        setError(errorMessage(body, "Reply failed."));
         return;
       }
       setReplyText("");
@@ -461,8 +606,8 @@ export function OperatorConsole() {
       const { status, body } = await adminMutate<{
         error?: { message?: string };
       }>("/api/admin/chat/resolve", { sessionId: selectedId });
-      if (status >= 400) {
-        setError(body.error?.message ?? "Resolve failed.");
+      if (status === 0 || status >= 400) {
+        setError(errorMessage(body, "Resolve failed."));
         return;
       }
       setSuccess("Conversation resolved.");
@@ -481,8 +626,8 @@ export function OperatorConsole() {
       const { status, body } = await adminMutate<{
         error?: { message?: string };
       }>("/api/admin/chat/reopen", { sessionId: selectedId });
-      if (status >= 400) {
-        setError(body.error?.message ?? "Reopen failed.");
+      if (status === 0 || status >= 400) {
+        setError(errorMessage(body, "Reopen failed."));
         return;
       }
       setSuccess("Conversation reopened.");
@@ -504,23 +649,33 @@ export function OperatorConsole() {
   function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const order = SURFACES.map((s) => s.id);
     const index = order.indexOf(surface);
-    if (index < 0) return;
-    let next = index;
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      next = (index + 1) % order.length;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      next = (index - 1 + order.length) % order.length;
-    } else if (event.key === "Home") {
-      next = 0;
-    } else if (event.key === "End") {
-      next = order.length - 1;
-    } else {
-      return;
-    }
+    const next = moveIndex(index, order.length, event.key);
+    if (next == null) return;
     event.preventDefault();
-    setSurface(order[next]!);
-    const btn = document.getElementById(`${tabListId}-${order[next]}`);
-    btn?.focus();
+    const nextId = order[next]!;
+    openSurface(nextId);
+    document.getElementById(`${tabListId}-${nextId}`)?.focus();
+  }
+
+  function onInboxKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const order = INBOX_FILTERS.map((item) => item.id);
+    const index = order.indexOf(inbox);
+    const next = moveIndex(index, order.length, event.key);
+    if (next == null) return;
+    event.preventDefault();
+    const nextId = order[next]!;
+    selectInbox(nextId);
+    document.getElementById(`${inboxTabListId}-${nextId}`)?.focus();
+  }
+
+  function selectInbox(value: InboxFilter) {
+    setInbox(value);
+    setSelectedId(null);
+    selectedIdRef.current = null;
+    setConversation(null);
+    if (readiness?.ready) {
+      void loadDashboard(value);
+    }
   }
 
   return (
@@ -544,7 +699,7 @@ export function OperatorConsole() {
                 aria-controls={`${tabListId}-panel-${item.id}`}
                 tabIndex={selected ? 0 : -1}
                 className={selected ? styles.tabActive : styles.tab}
-                onClick={() => setSurface(item.id)}
+                onClick={() => openSurface(item.id)}
               >
                 {item.label}
               </button>
@@ -626,14 +781,14 @@ export function OperatorConsole() {
             <button
               type="button"
               className={styles.ghost}
-              onClick={() => setSurface("availability")}
+              onClick={() => openSurface("availability")}
             >
               Manage availability
             </button>
             <button
               type="button"
               className={styles.ghost}
-              onClick={() => setSurface("diagnostics")}
+              onClick={() => openSurface("diagnostics")}
             >
               Open diagnostics
             </button>
@@ -750,28 +905,36 @@ export function OperatorConsole() {
                 className={styles.inboxTabs}
                 role="tablist"
                 aria-label="Inbox filter"
+                aria-orientation="horizontal"
+                onKeyDown={onInboxKeyDown}
               >
-                {(["active", "archived"] as const).map((value) => {
-                  const selected = inbox === value;
+                {INBOX_FILTERS.map((item) => {
+                  const selected = inbox === item.id;
                   return (
                     <button
-                      key={value}
+                      key={item.id}
+                      id={`${inboxTabListId}-${item.id}`}
                       type="button"
                       role="tab"
                       aria-selected={selected}
-                      className={selected ? styles.inboxTabActive : styles.inboxTab}
-                      onClick={() => {
-                        setInbox(value);
-                        setSelectedId(null);
-                        setConversation(null);
-                      }}
+                      aria-controls={`${inboxTabListId}-panel`}
+                      tabIndex={selected ? 0 : -1}
+                      className={
+                        selected ? styles.inboxTabActive : styles.inboxTab
+                      }
+                      onClick={() => selectInbox(item.id)}
                     >
-                      {value === "active" ? "Active" : "Archived (read)"}
+                      {item.label}
                     </button>
                   );
                 })}
               </div>
-              <div className={styles.inboxLayout}>
+              <div
+                id={`${inboxTabListId}-panel`}
+                role="tabpanel"
+                aria-label={`${inbox} conversations`}
+                className={styles.inboxLayout}
+              >
                 <ul className={styles.conversationList} aria-busy={loadingInbox}>
                   {loadingInbox ? (
                     <li className={styles.loading}>Loading conversations…</li>
@@ -791,7 +954,7 @@ export function OperatorConsole() {
                                 : styles.conversationItem
                             }
                             aria-current={selected ? "true" : undefined}
-                            onClick={() => void onSelect(id)}
+                            onClick={() => onSelect(id)}
                           >
                             <span className={styles.conversationMeta}>
                               {item.status ?? "open"}

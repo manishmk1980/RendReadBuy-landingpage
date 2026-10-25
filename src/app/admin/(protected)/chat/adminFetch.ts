@@ -8,34 +8,94 @@ export function readCsrfCookie(): string | null {
   return decodeURIComponent(match.slice(ADMIN_CSRF_COOKIE.length + 1));
 }
 
-export async function adminGet<T>(
-  path: string,
-): Promise<{ status: number; body: T }> {
-  const response = await fetch(path, {
-    method: "GET",
-    credentials: "same-origin",
-    headers: { accept: "application/json" },
-    cache: "no-store",
-  });
-  const body = (await response.json()) as T;
-  return { status: response.status, body };
+export function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String((error as { name?: unknown }).name) : "";
+  return name === "AbortError";
 }
 
+type AdminFetchInit = {
+  signal?: AbortSignal;
+};
+
+type ErrorBody = {
+  error?: { message?: string };
+};
+
+async function readBody<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return {
+      error: { message: "The server returned an unreadable response." },
+    } as T;
+  }
+}
+
+function networkFailureBody<T>(): T {
+  return {
+    error: { message: "Network error. Check your connection and retry." },
+  } as T;
+}
+
+/**
+ * Session-cookie GET. Never throws for network/JSON failures — returns status 0.
+ * AbortError is rethrown so callers can ignore cancelled requests.
+ */
+export async function adminGet<T>(
+  path: string,
+  init?: AdminFetchInit,
+): Promise<{ status: number; body: T }> {
+  try {
+    const response = await fetch(path, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+      cache: "no-store",
+      signal: init?.signal,
+    });
+    const body = await readBody<T>(response);
+    return { status: response.status, body };
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    return { status: 0, body: networkFailureBody<T>() };
+  }
+}
+
+/**
+ * CSRF-protected POST. Never throws for network/JSON failures — returns status 0.
+ * AbortError is rethrown so callers can ignore cancelled requests.
+ */
 export async function adminMutate<T>(
   path: string,
   payload: Record<string, unknown>,
+  init?: AdminFetchInit,
 ): Promise<{ status: number; body: T }> {
   const csrfToken = readCsrfCookie();
-  const response = await fetch(path, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      "content-type": "application/json",
-      accept: "application/json",
-      ...(csrfToken ? { [ADMIN_CSRF_HEADER]: csrfToken } : {}),
-    },
-    body: JSON.stringify({ ...payload, csrfToken }),
-  });
-  const body = (await response.json()) as T;
-  return { status: response.status, body };
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        ...(csrfToken ? { [ADMIN_CSRF_HEADER]: csrfToken } : {}),
+      },
+      body: JSON.stringify({ ...payload, csrfToken }),
+      signal: init?.signal,
+    });
+    const body = await readBody<T>(response);
+    return { status: response.status, body };
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    return { status: 0, body: networkFailureBody<T>() };
+  }
+}
+
+export function errorMessage(
+  body: ErrorBody | null | undefined,
+  fallback: string,
+): string {
+  const message = body?.error?.message;
+  return typeof message === "string" && message.trim() ? message : fallback;
 }

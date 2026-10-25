@@ -405,4 +405,408 @@ describe("OperatorConsole WS-5 IA", () => {
     const nav = screen.getByRole("navigation", { name: /chat administration/i });
     expect(within(nav).getAllByRole("tab")).toHaveLength(4);
   });
+
+  it("does not auto-retry diagnostics after HTTP failure; retry is manual only", async () => {
+    let diagnosticsCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/diagnostics")) {
+        diagnosticsCalls += 1;
+        return jsonResponse(
+          { error: { message: "Diagnostics boom" } },
+          503,
+        );
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Diagnostics" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/diagnostics boom/i);
+    });
+    expect(diagnosticsCalls).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(diagnosticsCalls).toBe(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /^retry$/i }));
+    await waitFor(() => {
+      expect(diagnosticsCalls).toBe(2);
+    });
+  });
+
+  it("marks Offline when a renewal heartbeat fails after confirmed Online", async () => {
+    let heartbeatCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/presence/heartbeat")) {
+        heartbeatCalls += 1;
+        if (heartbeatCalls === 1) {
+          return jsonResponse({
+            ok: true,
+            contributing: true,
+            expiresInMs: 300_000,
+            presencePolicy: "legacy",
+          });
+        }
+        return jsonResponse(
+          { error: { message: "heartbeat renewal expired" } },
+          401,
+        );
+      }
+      if (url.includes("/presence/offline")) {
+        return jsonResponse({ ok: true, cleared: 1 });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+    await screen.findByRole("button", { name: /go offline/i });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /go online/i })).toBeTruthy();
+      expect(screen.getByRole("alert").textContent).toMatch(/session expired/i);
+    });
+  });
+
+  it("ignores overlapping presence toggles while a transition is in flight", async () => {
+    let releaseHeartbeat!: (value: Response) => void;
+    const heartbeatGate = new Promise<Response>((resolve) => {
+      releaseHeartbeat = resolve;
+    });
+    let heartbeatCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/presence/heartbeat")) {
+        heartbeatCalls += 1;
+        if (heartbeatCalls === 1) {
+          return heartbeatGate;
+        }
+        return jsonResponse({
+          ok: true,
+          contributing: true,
+          expiresInMs: 300_000,
+          presencePolicy: "legacy",
+        });
+      }
+      if (url.includes("/presence/offline")) {
+        return jsonResponse({ ok: true, cleared: 1 });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    const goOnline = await screen.findByRole("button", { name: /go online/i });
+    fireEvent.click(goOnline);
+    fireEvent.click(goOnline);
+    fireEvent.click(goOnline);
+
+    await waitFor(() => {
+      expect(heartbeatCalls).toBe(1);
+    });
+
+    releaseHeartbeat(
+      jsonResponse({
+        ok: true,
+        contributing: true,
+        expiresInMs: 300_000,
+        presencePolicy: "legacy",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /go offline/i })).toBeTruthy();
+    });
+    expect(heartbeatCalls).toBe(1);
+  });
+
+  it("ignores stale conversation payloads after selecting another thread", async () => {
+    let releaseFirst!: (value: Response) => void;
+    const firstGate = new Promise<Response>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let conversationCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            recentConversations: [
+              {
+                sessionId: "sess-1",
+                status: "open",
+                visitorLabel: "Alpha",
+                lastMessagePreview: "First",
+                needsAttention: false,
+              },
+              {
+                sessionId: "sess-2",
+                status: "open",
+                visitorLabel: "Beta",
+                lastMessagePreview: "Second",
+                needsAttention: false,
+              },
+            ],
+          },
+        });
+      }
+      if (url.includes("/conversation")) {
+        conversationCalls += 1;
+        if (url.includes("sess-1") && conversationCalls === 1) {
+          return firstGate;
+        }
+        if (url.includes("sess-2")) {
+          return jsonResponse({
+            ok: true,
+            data: {
+              sessionId: "sess-2",
+              status: "open",
+              visitorLabel: "Beta",
+              messages: [{ id: "b1", role: "visitor", text: "Beta transcript" }],
+            },
+          });
+        }
+        return jsonResponse({
+          ok: true,
+          data: {
+            sessionId: "sess-1",
+            status: "open",
+            visitorLabel: "Alpha",
+            messages: [{ id: "a1", role: "visitor", text: "Alpha stale" }],
+          },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Conversations" }));
+    await waitFor(() => screen.getByText(/Alpha/));
+
+    fireEvent.click(screen.getByRole("button", { name: /Alpha/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Beta/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Beta transcript")).toBeTruthy();
+    });
+
+    releaseFirst(
+      jsonResponse({
+        ok: true,
+        data: {
+          sessionId: "sess-1",
+          status: "open",
+          visitorLabel: "Alpha",
+          messages: [{ id: "a1", role: "visitor", text: "Alpha stale" }],
+        },
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByText("Alpha stale")).toBeNull();
+    expect(screen.getByText("Beta transcript")).toBeTruthy();
+  });
+
+  it("ignores stale inbox payloads after changing the filter", async () => {
+    let releaseActive!: (value: Response) => void;
+    const activeGate = new Promise<Response>((resolve) => {
+      releaseActive = resolve;
+    });
+    let dashboardCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        dashboardCalls += 1;
+        if (url.includes("inbox=active") && dashboardCalls === 1) {
+          return activeGate;
+        }
+        if (url.includes("inbox=archived")) {
+          return jsonResponse({
+            ok: true,
+            data: {
+              recentConversations: [
+                {
+                  sessionId: "arch-1",
+                  status: "archived",
+                  visitorLabel: "Archived Visitor",
+                  lastMessagePreview: "Old thread",
+                },
+              ],
+            },
+          });
+        }
+        return jsonResponse({
+          ok: true,
+          data: {
+            recentConversations: [
+              {
+                sessionId: "act-1",
+                status: "open",
+                visitorLabel: "Active Visitor",
+                lastMessagePreview: "Fresh",
+              },
+            ],
+          },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Conversations" }));
+    await waitFor(() => expect(dashboardCalls).toBeGreaterThanOrEqual(1));
+
+    fireEvent.click(screen.getByRole("tab", { name: "Archived (read)" }));
+    await waitFor(() => {
+      expect(screen.getByText(/Archived Visitor/)).toBeTruthy();
+    });
+
+    releaseActive(
+      jsonResponse({
+        ok: true,
+        data: {
+          recentConversations: [
+            {
+              sessionId: "act-stale",
+              status: "open",
+              visitorLabel: "Stale Active",
+              lastMessagePreview: "Should not appear",
+            },
+          ],
+        },
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByText("Stale Active")).toBeNull();
+    expect(screen.getByText(/Archived Visitor/)).toBeTruthy();
+  });
+
+  it("surfaces network failures for readiness without crashing", async () => {
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/network error/i);
+    });
+    expect(screen.getByRole("button", { name: /retry readiness/i })).toBeTruthy();
+  });
+
+  it("supports arrow and home/end keys for primary navigation and inbox filters", async () => {
+    mockApis();
+    render(<OperatorConsole />);
+
+    const overview = await screen.findByRole("tab", { name: "Overview" });
+    overview.focus();
+    const primaryList = overview.closest('[role="tablist"]');
+    expect(primaryList).toBeTruthy();
+
+    fireEvent.keyDown(primaryList!, { key: "ArrowRight" });
+    expect(
+      screen.getByRole("tab", { name: "Conversations" }).getAttribute("aria-selected"),
+    ).toBe("true");
+
+    fireEvent.keyDown(
+      screen.getByRole("tab", { name: "Conversations" }).closest('[role="tablist"]')!,
+      { key: "End" },
+    );
+    expect(
+      screen.getByRole("tab", { name: "Diagnostics" }).getAttribute("aria-selected"),
+    ).toBe("true");
+
+    fireEvent.keyDown(
+      screen.getByRole("tab", { name: "Diagnostics" }).closest('[role="tablist"]')!,
+      { key: "Home" },
+    );
+    expect(
+      screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected"),
+    ).toBe("true");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Conversations" }));
+    const activeInbox = await screen.findByRole("tab", { name: "Active" });
+    expect(activeInbox.getAttribute("tabIndex")).toBe("0");
+    expect(
+      screen.getByRole("tab", { name: "Archived (read)" }).getAttribute("tabIndex"),
+    ).toBe("-1");
+
+    const inboxList = screen.getByRole("tablist", { name: /inbox filter/i });
+    fireEvent.keyDown(inboxList, { key: "ArrowRight" });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("tab", { name: "Archived (read)" }).getAttribute("aria-selected"),
+      ).toBe("true");
+    });
+    expect(screen.getByRole("tab", { name: "Active" }).getAttribute("tabIndex")).toBe(
+      "-1",
+    );
+  });
 });
