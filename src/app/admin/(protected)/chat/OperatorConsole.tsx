@@ -9,13 +9,16 @@ import {
   type KeyboardEvent,
 } from "react";
 import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
+import {
+  readPresenceOnlineIntent,
+  writePresenceOnlineIntent,
+} from "@/lib/chatOps/presenceIntent";
 import styles from "../../admin.module.css";
 import {
   adminGet,
   adminMutate,
   errorMessage,
   isAbortError,
-  readCsrfCookie,
 } from "./adminFetch";
 import {
   type ConversationData,
@@ -177,6 +180,7 @@ export function OperatorConsole() {
   const applyConfirmedOffline = useCallback(
     (options?: { error?: string; clearSuccess?: boolean }) => {
       stopHeartbeatLoop();
+      writePresenceOnlineIntent(false);
       setOnline(false);
       setExpiresInMs(null);
       setPresenceDetail("Offline for this console tab.");
@@ -270,6 +274,7 @@ export function OperatorConsole() {
         return false;
       }
       if (status > 0 && status < 400) {
+        writePresenceOnlineIntent(false);
         setPresenceError(null);
         setPresenceDetail("Offline for this console tab.");
         setExpiresInMs(null);
@@ -306,9 +311,11 @@ export function OperatorConsole() {
       if (epoch !== presenceEpochRef.current) return;
       if (!ok) {
         // Stay Offline until Central confirms contribution.
+        writePresenceOnlineIntent(false);
         setOnline(false);
         return;
       }
+      writePresenceOnlineIntent(true);
       setOnline(true);
       setPresenceSuccess("You are Online for this console tab.");
       startHeartbeatLoop();
@@ -359,52 +366,56 @@ export function OperatorConsole() {
   }, [goOffline, goOnline]);
 
   useEffect(() => {
-    const onPageHide = () => {
-      if (!onlineRef.current) return;
-      presenceEpochRef.current += 1;
-      stopHeartbeatLoop();
-      const consoleInstanceId =
-        consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
-      const csrfToken = readCsrfCookie();
-      const payload = JSON.stringify({
-        consoleInstanceId,
-        notAfterMs: Date.now(),
-        csrfToken,
-      });
+    // Refresh must not withdraw presence. Re-confirm only when this tab left an
+    // Online intent in sessionStorage; Central heartbeat is the authority.
+    let cancelled = false;
+    async function restorePresenceIfNeeded() {
+      if (!readPresenceOnlineIntent()) return;
+      if (presenceBusyRef.current || onlineRef.current) return;
+      presenceBusyRef.current = true;
+      setPresenceBusy(true);
+      setPresenceError(null);
+      const epoch = ++presenceEpochRef.current;
       try {
-        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-          const blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon("/api/admin/chat/presence/offline", blob);
+        const ok = await sendHeartbeat({ epoch });
+        if (cancelled || epoch !== presenceEpochRef.current) return;
+        if (!ok) {
+          writePresenceOnlineIntent(false);
           setOnline(false);
           return;
         }
-      } catch {
-        // fall through to best-effort fetch
+        writePresenceOnlineIntent(true);
+        setOnline(true);
+        setPresenceSuccess("Restored Online for this console tab.");
+        startHeartbeatLoop();
+      } finally {
+        presenceBusyRef.current = false;
+        setPresenceBusy(false);
       }
-      void sendOffline(true, { epoch: presenceEpochRef.current });
-      setOnline(false);
+    }
+    void restorePresenceIfNeeded();
+    return () => {
+      cancelled = true;
     };
+  }, [sendHeartbeat, startHeartbeatLoop]);
 
+  useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState !== "visible") return;
       if (!onlineRef.current || presenceBusyRef.current) return;
       void sendHeartbeat({ epoch: presenceEpochRef.current });
     };
 
-    window.addEventListener("pagehide", onPageHide);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onVisibility);
       stopHeartbeatLoop();
       inboxAbortRef.current?.abort();
       conversationAbortRef.current?.abort();
-      if (onlineRef.current) {
-        presenceEpochRef.current += 1;
-        void sendOffline(true, { epoch: presenceEpochRef.current });
-      }
+      // Do not POST Offline on unmount/refresh/pagehide. Explicit Go Offline and
+      // logout withdraw presence; unexpected closure is covered by heartbeat TTL.
     };
-  }, [sendHeartbeat, sendOffline, stopHeartbeatLoop]);
+  }, [sendHeartbeat, stopHeartbeatLoop]);
 
   const loadDashboard = useCallback(async (inboxFilter: InboxFilter) => {
     inboxAbortRef.current?.abort();

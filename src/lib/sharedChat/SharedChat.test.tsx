@@ -185,6 +185,17 @@ describe("SharedChat", () => {
       "https://rentreadbuy.com/subscription-plans",
     );
     expect(document.getElementById("pwi-chat-config")).toBeNull();
+    expect((window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled).toBeUndefined();
+  });
+
+  it("writes pwi-chat-config before the widget script for a successful load path", async () => {
+    const SharedChat = await freshSharedChat();
+    render(<SharedChat resolution={ready} />);
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
+    const config = document.getElementById("pwi-chat-config");
+    expect(config?.getAttribute("data-rrb-shared-chat")).toBe("config");
+    expect(config?.textContent).toContain('"siteKey":"rentreadbuy-silver"');
+    expect(widgetScripts()[0]?.getAttribute("src")).toContain("pw-chat.js");
   });
 
   it("mounts one loader under Strict Mode and loads the widget once", async () => {

@@ -23,6 +23,7 @@ describe("root layout SharedChat mount", () => {
 
   it("uses SharedChatLoader as the ready-state entry point", () => {
     const loaderSource = readFileSync(path.join("src", "lib", "sharedChat", "SharedChatLoader.tsx"), "utf8");
+    const packageJson = readFileSync(path.join("package.json"), "utf8");
     expect(sharedChatSource).toContain('import { SharedChatLoader } from "./SharedChatLoader"');
     expect(sharedChatSource).toContain("<SharedChatLoader settings={resolution.settings} />");
     expect(sharedChatSource).not.toContain("ChatPrivacyNotice");
@@ -30,6 +31,7 @@ describe("root layout SharedChat mount", () => {
     expect(loaderSource).toContain("void init()");
     expect(loaderSource).not.toContain("@/lib/consent");
     expect(loaderSource).not.toContain("rrb_silver_consent");
+    expect(packageJson).toContain("scripts/assert-shared-chat-production.mjs");
   });
 
   it("does not remount SharedChat from the campaign footer", () => {

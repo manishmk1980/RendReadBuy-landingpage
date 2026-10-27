@@ -128,6 +128,7 @@ function mockApis(overrides?: {
 describe("OperatorConsole WS-5 IA", () => {
   beforeEach(() => {
     document.cookie = "rrb_silver_chat_admin_csrf=test-csrf; path=/";
+    window.sessionStorage.clear();
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       get: () => "visible",
@@ -136,6 +137,7 @@ describe("OperatorConsole WS-5 IA", () => {
 
   afterEach(() => {
     cleanup();
+    window.sessionStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -975,6 +977,164 @@ describe("OperatorConsole WS-5 IA", () => {
     });
     expect(screen.getByRole("tab", { name: "Active" }).getAttribute("tabIndex")).toBe(
       "-1",
+    );
+  });
+
+  it("does not withdraw presence on pagehide or unmount after going Online", async () => {
+    const fetchMock = mockApis({
+      heartbeatBody: {
+        ok: true,
+        contributing: true,
+        expiresInMs: 300_000,
+        presencePolicy: "legacy_forced_online",
+      },
+    });
+    const { unmount } = render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+    await screen.findByRole("button", { name: /go offline/i });
+
+    window.dispatchEvent(new Event("pagehide"));
+    unmount();
+
+    const offlineCalls = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes("/presence/offline"),
+    );
+    expect(offlineCalls).toHaveLength(0);
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBe(
+      "online",
+    );
+  });
+
+  it("restores Online after remount when session intent remains and heartbeat confirms", async () => {
+    const fetchMock = mockApis({
+      heartbeatBody: {
+        ok: true,
+        contributing: true,
+        expiresInMs: 300_000,
+        presencePolicy: "legacy_forced_online",
+      },
+    });
+    const first = render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+    await screen.findByRole("button", { name: /go offline/i });
+    first.unmount();
+
+    const heartbeatBeforeRestore = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes("/presence/heartbeat"),
+    ).length;
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /go offline/i })).toBeTruthy();
+    });
+    expect(
+      screen.getAllByRole("status").some((node) => /restored online/i.test(node.textContent ?? "")),
+    ).toBe(true);
+    expect(
+      fetchMock.mock.calls.filter((call) =>
+        String(call[0]).includes("/presence/heartbeat"),
+      ).length,
+    ).toBeGreaterThan(heartbeatBeforeRestore);
+    expect(
+      fetchMock.mock.calls.filter((call) =>
+        String(call[0]).includes("/presence/offline"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("stays Offline after remount when prior Online intent is absent", async () => {
+    mockApis();
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    await screen.findByRole("button", { name: /go online/i });
+    expect(screen.queryByRole("button", { name: /go offline/i })).toBeNull();
+  });
+
+  it("clears Online intent on explicit Go Offline", async () => {
+    mockApis();
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+    await screen.findByRole("button", { name: /go offline/i });
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBe(
+      "online",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /go offline/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /go online/i })).toBeTruthy();
+    });
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBeNull();
+  });
+
+  it("does not restore Online when a post-refresh heartbeat is rejected", async () => {
+    window.sessionStorage.setItem("rrb_silver_chat_presence_intent", "online");
+    let heartbeatCalls = 0;
+    const fetchMock = vi.fn(async (...args: FetchArgs): Promise<Response> => {
+      const url = String(args[0]);
+      if (url.includes("/readiness")) {
+        return jsonResponse({
+          ok: true,
+          conversationOps: "ready",
+          ready: true,
+          config: { opsConfigured: true },
+        });
+      }
+      if (url.includes("/dashboard")) {
+        return jsonResponse({ ok: true, data: { recentConversations: [] } });
+      }
+      if (url.includes("/presence/heartbeat")) {
+        heartbeatCalls += 1;
+        return jsonResponse(
+          { error: { message: "presence expired" } },
+          403,
+        );
+      }
+      if (url.includes("/presence/offline")) {
+        return jsonResponse({ ok: true, cleared: 1 });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+
+    await waitFor(() => {
+      expect(heartbeatCalls).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole("button", { name: /go online/i })).toBeTruthy();
+    });
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBeNull();
+    expect(screen.queryByRole("button", { name: /go offline/i })).toBeNull();
+  });
+
+  it("keeps separate console instance ids so tabs do not share operator refs", async () => {
+    mockApis();
+    window.sessionStorage.setItem(
+      "rrb_silver_chat_console_instance",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    );
+    render(<OperatorConsole />);
+    fireEvent.click(screen.getByRole("tab", { name: "Operator Availability" }));
+    fireEvent.click(await screen.findByRole("button", { name: /go online/i }));
+    await screen.findByRole("button", { name: /go offline/i });
+
+    const firstInstance = window.sessionStorage.getItem(
+      "rrb_silver_chat_console_instance",
+    );
+    expect(firstInstance).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+    // Simulate another tab with its own sessionStorage-backed instance id.
+    window.sessionStorage.setItem(
+      "rrb_silver_chat_console_instance",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    );
+    expect(window.sessionStorage.getItem("rrb_silver_chat_console_instance")).not.toBe(
+      firstInstance,
     );
   });
 });

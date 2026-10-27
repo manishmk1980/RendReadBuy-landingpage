@@ -25,7 +25,7 @@ Campaign-local HMAC session (`rrb_silver_chat_admin_session`) with role `rrb_sil
 |---|---|
 | Presence routes | `POST /api/admin/chat/presence/heartbeat` and `/offline` |
 | Presence client | Server → central v1 paths with `RRB_SILVER_CHAT_INTEGRATION_TOKEN` |
-| Console UI | Go Online / Go Offline, heartbeat while Online, pagehide Offline |
+| Console UI | Go Online / Go Offline, heartbeat while Online; refresh restores via intent + heartbeat (no Offline on pagehide/unmount) |
 | Logout | Best-effort Offline before session revoke |
 | Multi-tab | Distinct `consoleInstanceId` → distinct `operatorRef` |
 
@@ -70,5 +70,5 @@ Central must grant `chat:presence:write` on `rrb-silver-campaign-next` (companio
 ## Remaining risks
 
 - Option 1 off: visitors may still see forced Online under legacy policy until Host activates `heartbeat_required_online` for Silver.  
-- `sendBeacon` Offline is best-effort; 5-minute TTL is the safety net.  
+- Unexpected tab/browser closure relies on the 5-minute heartbeat TTL (no Offline beacon on refresh).  
 - Multi-instance without shared store: logout on instance A may not revoke cookie on instance B.

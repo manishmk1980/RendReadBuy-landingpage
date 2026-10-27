@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { sharedChatIntents, sharedChatLauncher, sharedChatStorageKeys } from "@/config/sharedChat";
 import {
+  sharedChatIntents,
+  sharedChatLauncher,
+  sharedChatProductionSiteUrl,
+  sharedChatPublishedEndpoints,
+  sharedChatStorageKeys,
+} from "@/config/sharedChat";
+import {
+  assertSharedChatReadyForSilverProduction,
   buildSharedChatEmbedConfig,
   resolveSharedChatSettings,
   sharedChatOpenRequested,
@@ -114,6 +121,77 @@ describe("resolveSharedChatSettings", () => {
     expect(resolveSharedChatSettings({ ...publishedSilver, enabled: "off" }, true)).toEqual({
       status: "disabled",
     });
+  });
+
+  it("documents published Silver endpoint defaults for blank deploy env", () => {
+    expect(sharedChatPublishedEndpoints).toEqual({
+      apiBaseUrl: "https://uk.primewayz.com",
+      widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
+      widgetIntegrity:
+        "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+    });
+    expect(
+      resolveSharedChatSettings(
+        {
+          enabled: "on",
+          apiBaseUrl: sharedChatPublishedEndpoints.apiBaseUrl,
+          widgetUrl: sharedChatPublishedEndpoints.widgetUrl,
+          widgetIntegrity: sharedChatPublishedEndpoints.widgetIntegrity,
+        },
+        true,
+      ).status,
+    ).toBe("ready");
+  });
+});
+
+describe("assertSharedChatReadyForSilverProduction", () => {
+  const ready = resolveSharedChatSettings(publishedSilver, true);
+
+  it("throws for the live join host when chat is disabled in production", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "production",
+        },
+      ),
+    ).toThrow(/Shared Chat ready/i);
+  });
+
+  it("allows a ready resolution for the live join host", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(ready, {
+        siteUrl: `${sharedChatProductionSiteUrl}/`,
+        nodeEnv: "production",
+      }),
+    ).not.toThrow();
+  });
+
+  it("does not throw outside production node env", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "development",
+        },
+      ),
+    ).not.toThrow();
+  });
+
+  it("can require the Next production-build phase when asked", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "production",
+          requireProductionBuildPhase: true,
+          nextPhase: undefined,
+        },
+      ),
+    ).not.toThrow();
   });
 });
 

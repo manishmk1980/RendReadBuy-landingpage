@@ -4,6 +4,7 @@ import {
   sharedChatIntents,
   sharedChatLauncher,
   sharedChatPageContext,
+  sharedChatProductionSiteUrl,
   sharedChatStorageKeys,
 } from "@/config/sharedChat";
 
@@ -103,6 +104,42 @@ export function resolveSharedChatSettings(
 }
 
 export const sharedChat = resolveSharedChatSettings(sharedChatEnv);
+
+/**
+ * Fail closed when packaging the live Silver join host without a ready Shared
+ * Chat resolution. Invoked from `scripts/assert-shared-chat-production.mjs`
+ * before `next build` so a deploy cannot again ship `enabled:"off"`.
+ */
+export function assertSharedChatReadyForSilverProduction(
+  resolution: SharedChatResolution,
+  options: {
+    siteUrl: string;
+    nodeEnv: string | undefined;
+    requireProductionBuildPhase?: boolean;
+    nextPhase?: string | undefined;
+  },
+): void {
+  if (options.nodeEnv !== "production") return;
+  if (
+    options.requireProductionBuildPhase &&
+    options.nextPhase !== "phase-production-build"
+  ) {
+    return;
+  }
+
+  const site = options.siteUrl.trim().replace(/\/+$/, "");
+  if (site !== sharedChatProductionSiteUrl) return;
+  if (resolution.status === "ready") return;
+
+  const detail =
+    resolution.status === "invalid"
+      ? resolution.problems.join("; ")
+      : resolution.status;
+  throw new Error(
+    `Silver production build for ${site} requires Shared Chat ready ` +
+      `(set NEXT_PUBLIC_SHARED_CHAT_ENABLED=on). Got: ${detail}`,
+  );
+}
 
 /**
  * The published widget opens itself when `pw_chat=open` is on the page URL at
