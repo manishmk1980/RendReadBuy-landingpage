@@ -14,6 +14,7 @@ describe("LogoutButton", () => {
   beforeEach(() => {
     replace.mockReset();
     refresh.mockReset();
+    window.sessionStorage.clear();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
@@ -22,10 +23,12 @@ describe("LogoutButton", () => {
 
   afterEach(() => {
     cleanup();
+    window.sessionStorage.clear();
     vi.unstubAllGlobals();
   });
 
   it("best-effort Offline then navigates after successful logout", async () => {
+    window.sessionStorage.setItem("rrb_silver_chat_presence_intent", "online");
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/api/admin/chat/presence/offline")) {
@@ -47,6 +50,7 @@ describe("LogoutButton", () => {
       "/api/admin/chat/presence/offline",
     );
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain("/api/admin/auth/logout");
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBeNull();
   });
 
   it("does not navigate when logout fails so the session stays on the operator UI", async () => {

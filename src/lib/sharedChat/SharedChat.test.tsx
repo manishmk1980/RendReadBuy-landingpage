@@ -40,10 +40,10 @@ describe("SharedChat", () => {
   it("stays off when the published Silver URLs are present but enablement is off", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
-    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js");
     vi.stubEnv(
       "NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY",
-      "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+      "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
     );
     const SharedChat = await freshSharedChat();
 
@@ -185,6 +185,17 @@ describe("SharedChat", () => {
       "https://rentreadbuy.com/subscription-plans",
     );
     expect(document.getElementById("pwi-chat-config")).toBeNull();
+    expect((window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled).toBeUndefined();
+  });
+
+  it("writes pwi-chat-config before the widget script for a successful load path", async () => {
+    const SharedChat = await freshSharedChat();
+    render(<SharedChat resolution={ready} />);
+    await waitFor(() => expect(widgetScripts()).toHaveLength(1));
+    const config = document.getElementById("pwi-chat-config");
+    expect(config?.getAttribute("data-rrb-shared-chat")).toBe("config");
+    expect(config?.textContent).toContain('"siteKey":"rentreadbuy-silver"');
+    expect(widgetScripts()[0]?.getAttribute("src")).toContain("pw-chat.js");
   });
 
   it("mounts one loader under Strict Mode and loads the widget once", async () => {

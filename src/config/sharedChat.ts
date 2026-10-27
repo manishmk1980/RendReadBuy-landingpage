@@ -1,5 +1,5 @@
 /**
- * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.0).
+ * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.3).
  *
  * `siteKey` is a presentation identifier only. The Primewayz backend resolves
  * the tenant from the browser's registered Origin, so no tenant, market or
@@ -59,7 +59,7 @@ export const sharedChatStorageKeys = {
 } as const;
 
 /**
- * Compact cookie-settings disclosure. Widget 1.3.0 has no attribution field:
+ * Compact cookie-settings disclosure. Widget 1.3.3 has no attribution field:
  * panel title, assistant name and team name come from the platform
  * `chatWidget` payload. This copy is the landing-page credit.
  */
@@ -72,12 +72,47 @@ export const sharedChatDisclosure = {
 } as const;
 
 /**
+ * Canonical join host. Production builds for this origin must ship Shared Chat
+ * ready — an accidental `ENABLED=off` (seen on live after PR #12) leaves visitors
+ * with no launcher.
+ */
+export const sharedChatProductionSiteUrl = "https://join.rentreadbuy.com";
+
+/**
+ * Approved published widget 1.3.3 endpoints (WP Chat Connect parity). Used when
+ * the matching `NEXT_PUBLIC_SHARED_CHAT_*` URL/integrity env is blank so a
+ * partial deploy env cannot wipe the API/widget URLs while enablement stays on.
+ */
+export const sharedChatPublishedEndpoints = {
+  apiBaseUrl: "https://uk.primewayz.com",
+  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+  widgetIntegrity:
+    "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
+} as const;
+
+function envOrPublished(raw: string | undefined, fallback: string): string {
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
+/**
  * Deployment-dependent public settings. Each `NEXT_PUBLIC_` value is inlined
- * at build time, so the references must stay literal.
+ * at build time, so the references must stay literal. Enablement stays off
+ * unless explicitly `on`/`true`; blank URL/integrity fall back to the published
+ * Silver endpoints above.
  */
 export const sharedChatEnv = {
   enabled: process.env.NEXT_PUBLIC_SHARED_CHAT_ENABLED,
-  apiBaseUrl: process.env.NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL,
-  widgetUrl: process.env.NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL,
-  widgetIntegrity: process.env.NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY,
+  apiBaseUrl: envOrPublished(
+    process.env.NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL,
+    sharedChatPublishedEndpoints.apiBaseUrl,
+  ),
+  widgetUrl: envOrPublished(
+    process.env.NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL,
+    sharedChatPublishedEndpoints.widgetUrl,
+  ),
+  widgetIntegrity: envOrPublished(
+    process.env.NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY,
+    sharedChatPublishedEndpoints.widgetIntegrity,
+  ),
 };

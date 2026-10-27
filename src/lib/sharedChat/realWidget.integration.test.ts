@@ -1,7 +1,8 @@
 /**
- * Runs the verified shared widget 1.3.0 (`pw-chat.js`) against a stubbed fetch,
+ * Runs the verified shared widget 1.3.3 (`pw-chat.js`) against a stubbed fetch,
  * so no request leaves the machine. Point SHARED_CHAT_WIDGET_ARTIFACT at
- * `embed-releases/chat/1.3.0/pw-chat.js`; otherwise this file is skipped.
+ * `tmp-widget-artifacts/pw-chat-1.3.3.js` (or embed-releases/chat/1.3.3/pw-chat.js);
+ * otherwise this file is skipped.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { createElement } from "react";
@@ -249,8 +250,8 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
       "Something else",
     ]);
     expect(shadow.textContent).toContain("Questions about Silver Membership?");
-    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.3.0");
-    expect(chatApi().version).toBe("1.3.0");
+    expect(widgetHost()?.getAttribute("data-pw-chat-version")).toBe("1.3.3");
+    expect(chatApi().version).toBe("1.3.3");
     expect(shadow.querySelector(".pw-chat-title")?.textContent).toBe("RentReadBuy Reading Assistant");
     const root = shadow.querySelector(".pw-chat-root") as HTMLElement;
     expect(root.style.getPropertyValue("--pw-chat-launcher-bg")).toBe("#037b80");
@@ -302,7 +303,7 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
 
     expect(document.querySelectorAll("#pw-chat-root")).toHaveLength(1);
     expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
-    expect(chatApi().version).toBe("1.3.0");
+    expect(chatApi().version).toBe("1.3.3");
     expect(localStorage.getItem("rrb_silver_chat_session_id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(window.location.search).toContain("utm_source=qa_f2b");
     expect(window.location.search).toContain("utm_campaign=silver_launch_qa");
@@ -516,4 +517,61 @@ describe.skipIf(!artifact)("real shared widget artifact", () => {
     expect(document.querySelector("a")?.getAttribute("href")).toBe("https://rentreadbuy.com/subscription-plans");
     expect(window.location.pathname).toBe("/");
   });
+
+  it.each([
+    {
+      status: "online",
+      tone: "pw-chat-tone-online",
+      label: /Team available/i,
+    },
+    {
+      status: "offline",
+      tone: "pw-chat-tone-offline",
+      label: /Team offline/i,
+    },
+    {
+      status: "assistant",
+      tone: "pw-chat-tone-automated",
+      label: /Automated guidance available/i,
+    },
+  ] as const)(
+    "maps availability status $status to WP-parity tone $tone without hiding the launcher",
+    async ({ status, tone, label }) => {
+      stubFetch((method, path) =>
+        path === "/api/chat/availability"
+          ? {
+              status: 200,
+              body: {
+                status,
+                canAcceptMessages: status !== "offline",
+                responseExpectation: "",
+                // Widget must never treat these as Online — only `status` drives tones.
+                hasActiveAdmin: false,
+                presencePolicy: "legacy_forced_online",
+              },
+            }
+          : healthy(method, path),
+      );
+      await loadCampaignWidget();
+      await waitFor(() => Boolean(widgetHost()), "widget host");
+      await waitFor(
+        () => Boolean(shadowRoots[0]?.querySelector(`.pw-chat-launcher-dot.${tone}`)),
+        `launcher tone ${tone}`,
+      );
+
+      const shadow = shadowRoots[0];
+      const launcher = shadow.querySelector(".pw-chat-launcher") as HTMLButtonElement;
+      expect(launcher.hidden).toBe(false);
+      expect(launcher.getAttribute("aria-label")).toMatch(label);
+      expect(shadow.querySelector(`.pw-chat-launcher-dot.${tone}`)).toBeTruthy();
+
+      chatApi().open();
+      await waitFor(
+        () => shadow.querySelector(".pw-chat-panel")?.hasAttribute("hidden") === false,
+        "open panel",
+      );
+      expect(shadow.querySelector(`.pw-chat-status-dot.${tone}`)).toBeTruthy();
+      expect(shadow.querySelector(".pw-chat-status")?.textContent ?? "").toMatch(label);
+    },
+  );
 });

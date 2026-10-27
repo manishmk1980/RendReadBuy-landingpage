@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { sharedChatIntents, sharedChatLauncher, sharedChatStorageKeys } from "@/config/sharedChat";
 import {
+  sharedChatIntents,
+  sharedChatLauncher,
+  sharedChatProductionSiteUrl,
+  sharedChatPublishedEndpoints,
+  sharedChatStorageKeys,
+} from "@/config/sharedChat";
+import {
+  assertSharedChatReadyForSilverProduction,
   buildSharedChatEmbedConfig,
   resolveSharedChatSettings,
   sharedChatOpenRequested,
@@ -18,8 +25,8 @@ const valid: SharedChatEnv = {
 const publishedSilver: SharedChatEnv = {
   enabled: "on",
   apiBaseUrl: "https://uk.primewayz.com",
-  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
-  widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+  widgetIntegrity: "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
 };
 
 const settings: SharedChatSettings = {
@@ -28,7 +35,7 @@ const settings: SharedChatSettings = {
   widgetIntegrity: null,
 };
 
-/** Constraints the shared widget (1.3.0) applies before accepting a field. */
+/** Constraints the shared widget (1.3.3) applies before accepting a field. */
 const WIDGET_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const WIDGET_STORAGE_KEY_PATTERN = /^[A-Za-z0-9_.:-]{1,100}$/;
 const WIDGET_DEFAULT_STORAGE_PREFIX = "primewayz_chat_";
@@ -83,8 +90,8 @@ describe("resolveSharedChatSettings", () => {
   });
 
   it("accepts a same-origin path for a self-hosted widget copy", () => {
-    const result = resolveSharedChatSettings({ ...valid, widgetUrl: "/vendor/pw-chat.js?v=1.3.0" }, true);
-    expect(result.status === "ready" && result.settings.widgetUrl).toBe("/vendor/pw-chat.js?v=1.3.0");
+    const result = resolveSharedChatSettings({ ...valid, widgetUrl: "/vendor/pw-chat.js?v=1.3.3" }, true);
+    expect(result.status === "ready" && result.settings.widgetUrl).toBe("/vendor/pw-chat.js?v=1.3.3");
   });
 
   it("allows plain http on localhost only outside production", () => {
@@ -104,8 +111,8 @@ describe("resolveSharedChatSettings", () => {
       status: "ready",
       settings: {
         apiBaseUrl: "https://uk.primewayz.com",
-        widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
-        widgetIntegrity: "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+        widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+        widgetIntegrity: "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
       },
     });
   });
@@ -115,10 +122,81 @@ describe("resolveSharedChatSettings", () => {
       status: "disabled",
     });
   });
+
+  it("documents published Silver endpoint defaults for blank deploy env", () => {
+    expect(sharedChatPublishedEndpoints).toEqual({
+      apiBaseUrl: "https://uk.primewayz.com",
+      widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
+      widgetIntegrity:
+        "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
+    });
+    expect(
+      resolveSharedChatSettings(
+        {
+          enabled: "on",
+          apiBaseUrl: sharedChatPublishedEndpoints.apiBaseUrl,
+          widgetUrl: sharedChatPublishedEndpoints.widgetUrl,
+          widgetIntegrity: sharedChatPublishedEndpoints.widgetIntegrity,
+        },
+        true,
+      ).status,
+    ).toBe("ready");
+  });
+});
+
+describe("assertSharedChatReadyForSilverProduction", () => {
+  const ready = resolveSharedChatSettings(publishedSilver, true);
+
+  it("throws for the live join host when chat is disabled in production", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "production",
+        },
+      ),
+    ).toThrow(/Shared Chat ready/i);
+  });
+
+  it("allows a ready resolution for the live join host", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(ready, {
+        siteUrl: `${sharedChatProductionSiteUrl}/`,
+        nodeEnv: "production",
+      }),
+    ).not.toThrow();
+  });
+
+  it("does not throw outside production node env", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "development",
+        },
+      ),
+    ).not.toThrow();
+  });
+
+  it("can require the Next production-build phase when asked", () => {
+    expect(() =>
+      assertSharedChatReadyForSilverProduction(
+        { status: "disabled" },
+        {
+          siteUrl: sharedChatProductionSiteUrl,
+          nodeEnv: "production",
+          requireProductionBuildPhase: true,
+          nextPhase: undefined,
+        },
+      ),
+    ).not.toThrow();
+  });
 });
 
 describe("sharedChatOpenRequested", () => {
-  it("accepts only the exact pw_chat=open query used by widget 1.3.0", () => {
+  it("accepts only the exact pw_chat=open query used by widget 1.3.3", () => {
     expect(sharedChatOpenRequested("?pw_chat=open")).toBe(true);
     expect(sharedChatOpenRequested("pw_chat=open")).toBe(true);
     expect(sharedChatOpenRequested("?utm_source=qa_f2b&utm_medium=test&pw_chat=open")).toBe(true);
