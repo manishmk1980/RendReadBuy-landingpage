@@ -160,6 +160,15 @@
   line-height: var(--leading-normal);
 }
 
+.disclaimerLink {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+
+.disclaimerLink:hover {
+  text-decoration: underline;
+}
+
 .switch {
   flex: none;
   width: 1.5rem;

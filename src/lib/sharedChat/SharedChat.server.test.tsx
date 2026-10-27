@@ -1,12 +1,10 @@
 // @vitest-environment node
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { sharedChatDisclosure } from "@/config/sharedChat";
-import { links } from "@/config/links";
 import { SharedChat } from "./SharedChat";
 
 describe("SharedChat on the server", () => {
-  it("renders the disclosure without a widget script, window or storage", () => {
+  it("renders no disclosure, widget script or config on the server", () => {
     expect(typeof window).toBe("undefined");
     const html = renderToString(
       <SharedChat
@@ -20,11 +18,9 @@ describe("SharedChat on the server", () => {
         }}
       />,
     );
-    expect(html).toContain("Chat Support &amp; Privacy");
-    expect(html).toContain("Primewayz Infotech");
-    expect(html).not.toContain("Primewayz UK");
-    expect(html).toContain(links.privacy.href);
-    expect(html).toContain(sharedChatDisclosure.openLabel);
+    expect(html).toBe("");
+    expect(html).not.toContain("Chat Support");
+    expect(html).not.toContain("Primewayz");
     expect(html).not.toContain("pw-chat.js");
     expect(html).not.toContain("pwi-chat-config");
   });

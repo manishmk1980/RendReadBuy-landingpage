@@ -12,6 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import { campaignCopy } from "@/config/campaign";
+import { links } from "@/config/links";
+import { sharedChatDisclosure } from "@/config/sharedChat";
 import {
   consentChoiceSnapshot,
   getServerConsentSnapshot,
@@ -166,9 +168,12 @@ function PreferencesDialog({
   returnFocusId: string;
 }) {
   const copy = campaignCopy.consent;
+  const chatCopy = sharedChatDisclosure;
   const titleId = useId();
   const bodyId = useId();
   const disclaimerId = useId();
+  const chatProcessingId = useId();
+  const chatSafetyId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -223,7 +228,7 @@ function PreferencesDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={`${bodyId} ${disclaimerId}`}
+        aria-describedby={`${bodyId} ${disclaimerId} ${chatProcessingId} ${chatSafetyId}`}
         tabIndex={-1}
         data-pw-chat-avoid=""
         onClick={(event) => event.stopPropagation()}
@@ -250,6 +255,16 @@ function PreferencesDialog({
         </div>
         <p id={disclaimerId} className={styles.disclaimer}>
           {copy.preferencesDisclaimer}
+        </p>
+        <p id={chatProcessingId} className={styles.disclaimer}>
+          {chatCopy.processing}
+        </p>
+        <p id={chatSafetyId} className={styles.disclaimer}>
+          {chatCopy.safetyLead}{" "}
+          <a href={links.privacy.href} className={styles.disclaimerLink}>
+            {chatCopy.privacyLabel}
+          </a>{" "}
+          {chatCopy.safetyTail}
         </p>
         <div className={styles.actions}>
           <button type="button" className={styles.primary} onClick={onSave}>

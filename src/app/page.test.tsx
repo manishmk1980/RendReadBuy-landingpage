@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { publishedFaqs } from "@/config/faqs";
 import { SharedChat } from "@/lib/sharedChat/SharedChat";
@@ -32,6 +32,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.getElementById("pwi-chat-config")?.remove();
+  document.querySelectorAll('script[data-rrb-shared-chat="widget"]').forEach((node) => node.remove());
+  delete (window as { __primewayzChatEmbedInstalled?: boolean }).__primewayzChatEmbedInstalled;
   vi.useRealTimers();
 });
 
@@ -42,7 +45,7 @@ function membershipLinks() {
 }
 
 describe("campaign landing page", () => {
-  it("renders the membership CTAs and FAQs without chat", () => {
+  it("renders the membership CTAs and FAQs without a footer chat disclosure", () => {
     render(<CampaignPage />);
     expect(screen.getAllByRole("link", { name: /Start Silver Membership/ }).length).toBeGreaterThan(0);
     expect(membershipLinks().length).toBeGreaterThan(0);
@@ -52,9 +55,10 @@ describe("campaign landing page", () => {
     }
     expect(document.querySelector('script[data-rrb-shared-chat]')).toBeNull();
     expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
+    expect(document.querySelector("footer")?.textContent).not.toMatch(/Primewayz Infotech/);
   });
 
-  it("keeps signup and FAQs working when the chat script fails to load", async () => {
+  it("keeps signup and FAQs working when the auto-loaded chat script fails", async () => {
     render(
       <>
         <CampaignPage />
@@ -71,22 +75,19 @@ describe("campaign landing page", () => {
       </>,
     );
     const before = membershipLinks().map((link) => link.getAttribute("href"));
-    expect(document.querySelector('script[data-rrb-shared-chat="widget"]')).toBeNull();
 
-    await act(async () => {
-      screen.getByRole("button", { name: "Open chat support" }).click();
-      await Promise.resolve();
+    await waitFor(() => {
+      expect(document.querySelector('script[data-rrb-shared-chat="widget"]')).not.toBeNull();
     });
     const script = document.querySelector('script[data-rrb-shared-chat="widget"]');
-    expect(script).not.toBeNull();
     await act(async () => {
       script!.dispatchEvent(new Event("error"));
     });
 
     expect(document.querySelector('script[data-rrb-shared-chat]')).toBeNull();
-    expect(screen.getByRole("status").textContent).toMatch(/unavailable/i);
     expect(membershipLinks().map((link) => link.getAttribute("href"))).toEqual(before);
     expect(screen.getByText(publishedFaqs[0].question)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
   });
 
   it("marks the hero pause control so the chat launcher can avoid it", () => {
