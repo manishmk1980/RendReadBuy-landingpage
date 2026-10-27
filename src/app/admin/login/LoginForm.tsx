@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { ADMIN_CSRF_HEADER } from "@/lib/adminAuth/constants";
+import { clearPresenceIntent } from "@/lib/chatOps/presenceIntent";
 import styles from "../admin.module.css";
 
 const CSRF_INIT_ERROR =
@@ -107,6 +108,8 @@ export function LoginForm({
         return;
       }
 
+      // New login prefers Online; clear any prior explicit Offline in this tab.
+      clearPresenceIntent();
       router.replace("/admin");
       router.refresh();
     } catch {

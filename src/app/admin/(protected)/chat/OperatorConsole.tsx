@@ -10,7 +10,9 @@ import {
 } from "react";
 import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
 import {
-  readPresenceOnlineIntent,
+  readPresenceIntent,
+  shouldEstablishPresenceOnMount,
+  writePresenceIntent,
   writePresenceOnlineIntent,
 } from "@/lib/chatOps/presenceIntent";
 import styles from "../../admin.module.css";
@@ -274,7 +276,7 @@ export function OperatorConsole() {
         return false;
       }
       if (status > 0 && status < 400) {
-        writePresenceOnlineIntent(false);
+        writePresenceIntent("offline");
         setPresenceError(null);
         setPresenceDetail("Offline for this console tab.");
         setExpiresInMs(null);
@@ -366,12 +368,14 @@ export function OperatorConsole() {
   }, [goOffline, goOnline]);
 
   useEffect(() => {
-    // Refresh must not withdraw presence. Re-confirm only when this tab left an
-    // Online intent in sessionStorage; Central heartbeat is the authority.
+    // After login (no intent) or refresh with Online intent: establish/reconfirm
+    // via Central heartbeat. Explicit Offline intent skips until Go Online or a
+    // new login clears the intent. Never show Online without confirmation.
     let cancelled = false;
-    async function restorePresenceIfNeeded() {
-      if (!readPresenceOnlineIntent()) return;
+    async function establishPresenceIfNeeded() {
+      if (!shouldEstablishPresenceOnMount()) return;
       if (presenceBusyRef.current || onlineRef.current) return;
+      const restoring = readPresenceIntent() === "online";
       presenceBusyRef.current = true;
       setPresenceBusy(true);
       setPresenceError(null);
@@ -386,14 +390,18 @@ export function OperatorConsole() {
         }
         writePresenceOnlineIntent(true);
         setOnline(true);
-        setPresenceSuccess("Restored Online for this console tab.");
+        setPresenceSuccess(
+          restoring
+            ? "Restored Online for this console tab."
+            : "You are Online for this console tab.",
+        );
         startHeartbeatLoop();
       } finally {
         presenceBusyRef.current = false;
         setPresenceBusy(false);
       }
     }
-    void restorePresenceIfNeeded();
+    void establishPresenceIfNeeded();
     return () => {
       cancelled = true;
     };
@@ -816,10 +824,11 @@ export function OperatorConsole() {
         >
           <h2 className={styles.sectionTitle}>Operator Availability</h2>
           <p className={styles.lede}>
-            Go online only when you are ready to handle Silver campaign chats.
-            Login alone does not mark the team Online. Each browser tab has its
-            own presence session. State changes only after the presence service
-            confirms.
+            After sign-in this tab goes Online once Central confirms the
+            heartbeat. Choose Go Offline when you are unavailable; that choice
+            survives refresh until you go Online again or sign in anew. Each
+            browser tab has its own presence session. State changes only after
+            the presence service confirms.
           </p>
           <dl className={styles.statusGrid}>
             <div>

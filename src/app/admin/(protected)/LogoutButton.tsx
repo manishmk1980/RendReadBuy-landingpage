@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ADMIN_CSRF_COOKIE, ADMIN_CSRF_HEADER } from "@/lib/adminAuth/constants";
 import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
-import { writePresenceOnlineIntent } from "@/lib/chatOps/presenceIntent";
+import { clearPresenceIntent } from "@/lib/chatOps/presenceIntent";
 import styles from "../admin.module.css";
 
 function readCsrfCookie(): string | null {
@@ -27,7 +27,7 @@ export function LogoutButton() {
     const consoleInstanceId = getOrCreateConsoleInstanceId();
 
     // Best-effort Offline before session revoke. TTL clears residual Online.
-    writePresenceOnlineIntent(false);
+    clearPresenceIntent();
     try {
       await fetch("/api/admin/chat/presence/offline", {
         method: "POST",

@@ -1,32 +1,56 @@
 /**
- * Tab-scoped Online intent for the operator console.
+ * Tab-scoped operator presence intent for the Silver console.
  *
- * Survives refresh (sessionStorage) so the console can re-confirm presence with
- * Central after remount. Cleared on explicit Offline / logout. Unexpected tab
- * closure drops sessionStorage; Central TTL then expires the presence row.
+ * - `online` — last confirmed Online; remount re-confirms via Central heartbeat
+ * - `offline` — explicit Go Offline; stay Offline across refresh until Go Online
+ *   or a new login clears the intent
+ * - absent — default after login / cleared failure: auto-establish Online via
+ *   Central heartbeat (never show Online without confirmation)
+ *
+ * Unexpected tab closure drops sessionStorage; Central TTL expires the row.
  */
 
-const STORAGE_KEY = "rrb_silver_chat_presence_intent";
-const ONLINE_VALUE = "online";
+export type PresenceIntent = "online" | "offline";
 
-export function readPresenceOnlineIntent(): boolean {
-  if (typeof window === "undefined") return false;
+const STORAGE_KEY = "rrb_silver_chat_presence_intent";
+
+export function readPresenceIntent(): PresenceIntent | null {
+  if (typeof window === "undefined") return null;
   try {
-    return window.sessionStorage.getItem(STORAGE_KEY) === ONLINE_VALUE;
+    const value = window.sessionStorage.getItem(STORAGE_KEY);
+    if (value === "online" || value === "offline") return value;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function writePresenceOnlineIntent(online: boolean): void {
+export function writePresenceIntent(intent: PresenceIntent | null): void {
   if (typeof window === "undefined") return;
   try {
-    if (online) {
-      window.sessionStorage.setItem(STORAGE_KEY, ONLINE_VALUE);
-    } else {
+    if (intent === null) {
       window.sessionStorage.removeItem(STORAGE_KEY);
+    } else {
+      window.sessionStorage.setItem(STORAGE_KEY, intent);
     }
   } catch {
     // Private mode / blocked storage must not break the console.
   }
+}
+
+/** True unless the operator explicitly chose Go Offline in this tab. */
+export function shouldEstablishPresenceOnMount(): boolean {
+  return readPresenceIntent() !== "offline";
+}
+
+export function readPresenceOnlineIntent(): boolean {
+  return readPresenceIntent() === "online";
+}
+
+export function writePresenceOnlineIntent(online: boolean): void {
+  writePresenceIntent(online ? "online" : null);
+}
+
+export function clearPresenceIntent(): void {
+  writePresenceIntent(null);
 }

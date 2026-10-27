@@ -25,7 +25,7 @@ Campaign-local HMAC session (`rrb_silver_chat_admin_session`) with role `rrb_sil
 |---|---|
 | Presence routes | `POST /api/admin/chat/presence/heartbeat` and `/offline` |
 | Presence client | Server → central v1 paths with `RRB_SILVER_CHAT_INTEGRATION_TOKEN` |
-| Console UI | Go Online / Go Offline, heartbeat while Online; refresh restores via intent + heartbeat (no Offline on pagehide/unmount) |
+| Console UI | Auto Online after login once Central heartbeat confirms; Go Offline persists across refresh until Go Online or new login; refresh restores Online intent via heartbeat (no offline on pagehide/unmount) |
 | Logout | Best-effort Offline before session revoke |
 | Multi-tab | Distinct `consoleInstanceId` → distinct `operatorRef` |
 
@@ -51,7 +51,7 @@ Central must grant `chat:presence:write` on `rrb-silver-campaign-next` (companio
 
 1. Deploy central WS-4 first (scope grant).  
 2. Deploy this Silver build.  
-3. Smoke: login → Go Online → Host presence reporting for `rrb-silver-campaign` → Go Offline / logout.  
+3. Smoke: login → Online after heartbeat → Host presence reporting for `rrb-silver-campaign` → Go Offline / refresh stays Offline → logout.  
 4. Rollback: redeploy previous Silver build; TTL clears Online within five minutes. Optionally revoke the ops token.
 
 ## Production verification checklist
