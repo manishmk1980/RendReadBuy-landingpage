@@ -40,10 +40,10 @@ describe("SharedChat", () => {
   it("stays off when the published Silver URLs are present but enablement is off", async () => {
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_ENABLED", "off");
     vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_API_BASE_URL", "https://uk.primewayz.com");
-    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js");
+    vi.stubEnv("NEXT_PUBLIC_SHARED_CHAT_WIDGET_URL", "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js");
     vi.stubEnv(
       "NEXT_PUBLIC_SHARED_CHAT_WIDGET_INTEGRITY",
-      "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+      "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
     );
     const SharedChat = await freshSharedChat();
 

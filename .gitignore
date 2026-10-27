@@ -47,6 +47,7 @@ next-env.d.ts
 
 # local shared-chat widget artifacts used by integration tests
 /embed-releases/
+/tmp-widget-artifacts/
 
 # local Ubuntu-stage evidence packs (never cut over from here)
 /release-staging/

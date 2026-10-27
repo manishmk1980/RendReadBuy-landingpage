@@ -1,5 +1,5 @@
 /**
- * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.0).
+ * Campaign-owned presentation for the shared Primewayz visitor chat (widget 1.3.3).
  *
  * `siteKey` is a presentation identifier only. The Primewayz backend resolves
  * the tenant from the browser's registered Origin, so no tenant, market or
@@ -59,7 +59,7 @@ export const sharedChatStorageKeys = {
 } as const;
 
 /**
- * Compact cookie-settings disclosure. Widget 1.3.0 has no attribution field:
+ * Compact cookie-settings disclosure. Widget 1.3.3 has no attribution field:
  * panel title, assistant name and team name come from the platform
  * `chatWidget` payload. This copy is the landing-page credit.
  */
@@ -79,15 +79,15 @@ export const sharedChatDisclosure = {
 export const sharedChatProductionSiteUrl = "https://join.rentreadbuy.com";
 
 /**
- * Approved published widget 1.3.0 endpoints. Used when the matching
- * `NEXT_PUBLIC_SHARED_CHAT_*` URL/integrity env is blank so a partial deploy
- * env cannot wipe the API/widget URLs while enablement stays on.
+ * Approved published widget 1.3.3 endpoints (WP Chat Connect parity). Used when
+ * the matching `NEXT_PUBLIC_SHARED_CHAT_*` URL/integrity env is blank so a
+ * partial deploy env cannot wipe the API/widget URLs while enablement stays on.
  */
 export const sharedChatPublishedEndpoints = {
   apiBaseUrl: "https://uk.primewayz.com",
-  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.0/pw-chat.js",
+  widgetUrl: "https://uk.primewayz.com/embed/chat/1.3.3/pw-chat.js",
   widgetIntegrity:
-    "sha384-eViGVIdK7TNI/WYYpjF31NYjvzJEZ0sTcioyRIASbNuex4DHyjl0yRBYzCRfrEv4",
+    "sha384-jaRJqzda7FgtN2U/hubbo/jUzx9+qp+bhtrN+K1QGZYc4FgebxlyCukI/BxkpAGJ",
 } as const;
 
 function envOrPublished(raw: string | undefined, fallback: string): string {
