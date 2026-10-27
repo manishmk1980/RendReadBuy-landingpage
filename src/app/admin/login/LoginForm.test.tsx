@@ -15,15 +15,18 @@ describe("LoginForm CSRF initialization", () => {
   beforeEach(() => {
     replace.mockReset();
     refresh.mockReset();
+    window.sessionStorage.clear();
   });
 
   afterEach(() => {
     cleanup();
+    window.sessionStorage.clear();
     vi.unstubAllGlobals();
   });
 
   it("fetches CSRF before enabling submit and posts matching token on login", async () => {
     const csrfToken = "csrf.test-token-value";
+    window.sessionStorage.setItem("rrb_silver_chat_presence_intent", "offline");
     const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>): Promise<Response> => {
       const url = String(args[0]);
       if (url.includes("/api/admin/auth/csrf")) {
@@ -83,6 +86,8 @@ describe("LoginForm CSRF initialization", () => {
       password: "secret",
       csrfToken,
     });
+    // New login clears prior presence confirmation so console announces fresh Online.
+    expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBeNull();
   });
 
   it("keeps submit disabled and never bypasses CSRF when init fails", async () => {

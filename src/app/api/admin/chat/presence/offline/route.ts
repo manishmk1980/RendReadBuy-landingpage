@@ -20,9 +20,9 @@ type OfflineBody = {
 };
 
 /**
- * Explicit Offline for this console tab's operatorRef.
- * Best-effort on explicit Offline and logout; 5-minute TTL remains the safety
- * net for unexpected tab/browser closure (refresh must not call this route).
+ * Withdraw Online for this console tab's operatorRef.
+ * Best-effort on logout; 5-minute TTL remains the safety net for unexpected
+ * tab/browser closure (refresh/navigation must not call this route).
  */
 export async function POST(request: Request) {
   try {
