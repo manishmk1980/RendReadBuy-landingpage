@@ -101,7 +101,7 @@ Central: `{ action, sessionId, clientActionId, actor, text }`.
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/api/admin/chat/presence/heartbeat` | CSRF + session; body `{ consoleInstanceId, csrfToken }`; server derives `operatorRef` |
-| POST | `/api/admin/chat/presence/offline` | Same; optional `notAfterMs`; best-effort on explicit Offline / logout (not on refresh) |
+| POST | `/api/admin/chat/presence/offline` | Same; optional `notAfterMs`; best-effort on logout (not on refresh/navigation) |
 
 Upstream: `POST /api/v1/operator-presence/{heartbeat\|offline}` with server-only `RRB_SILVER_CHAT_INTEGRATION_TOKEN`. Tenant comes only from the credential. Option 1 / `heartbeat_required_online` is **not** activated by this campaign.
 

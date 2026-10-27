@@ -1,56 +1,40 @@
 /**
- * Tab-scoped operator presence intent for the Silver console.
+ * Tab-scoped confirmed Online flag for the Silver console.
  *
- * - `online` — last confirmed Online; remount re-confirms via Central heartbeat
- * - `offline` — explicit Go Offline; stay Offline across refresh until Go Online
- *   or a new login clears the intent
- * - absent — default after login / cleared failure: auto-establish Online via
+ * - `online` — last Central-confirmed Online; remount re-confirms via heartbeat
+ *   and surfaces a "Restored Online" status
+ * - absent — after login / failed confirmation: auto-establish Online via
  *   Central heartbeat (never show Online without confirmation)
  *
- * Unexpected tab closure drops sessionStorage; Central TTL expires the row.
+ * There is no operator Offline preference. Online is automatic while the
+ * session is valid; logout withdraws presence, and unexpected closure is
+ * covered by Central heartbeat TTL (sessionStorage drops with the tab).
  */
-
-export type PresenceIntent = "online" | "offline";
 
 const STORAGE_KEY = "rrb_silver_chat_presence_intent";
 
-export function readPresenceIntent(): PresenceIntent | null {
-  if (typeof window === "undefined") return null;
+export function readPresenceOnlineIntent(): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const value = window.sessionStorage.getItem(STORAGE_KEY);
-    if (value === "online" || value === "offline") return value;
-    return null;
+    return window.sessionStorage.getItem(STORAGE_KEY) === "online";
   } catch {
-    return null;
+    return false;
   }
 }
 
-export function writePresenceIntent(intent: PresenceIntent | null): void {
+export function writePresenceOnlineIntent(online: boolean): void {
   if (typeof window === "undefined") return;
   try {
-    if (intent === null) {
-      window.sessionStorage.removeItem(STORAGE_KEY);
+    if (online) {
+      window.sessionStorage.setItem(STORAGE_KEY, "online");
     } else {
-      window.sessionStorage.setItem(STORAGE_KEY, intent);
+      window.sessionStorage.removeItem(STORAGE_KEY);
     }
   } catch {
     // Private mode / blocked storage must not break the console.
   }
 }
 
-/** True unless the operator explicitly chose Go Offline in this tab. */
-export function shouldEstablishPresenceOnMount(): boolean {
-  return readPresenceIntent() !== "offline";
-}
-
-export function readPresenceOnlineIntent(): boolean {
-  return readPresenceIntent() === "online";
-}
-
-export function writePresenceOnlineIntent(online: boolean): void {
-  writePresenceIntent(online ? "online" : null);
-}
-
 export function clearPresenceIntent(): void {
-  writePresenceIntent(null);
+  writePresenceOnlineIntent(false);
 }

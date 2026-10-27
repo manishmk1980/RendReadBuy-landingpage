@@ -86,7 +86,7 @@ describe("LoginForm CSRF initialization", () => {
       password: "secret",
       csrfToken,
     });
-    // New login clears prior explicit Offline so OperatorConsole auto-establishes.
+    // New login clears prior presence confirmation so console announces fresh Online.
     expect(window.sessionStorage.getItem("rrb_silver_chat_presence_intent")).toBeNull();
   });
 

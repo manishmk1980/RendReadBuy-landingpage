@@ -108,7 +108,8 @@ export function LoginForm({
         return;
       }
 
-      // New login prefers Online; clear any prior explicit Offline in this tab.
+      // Fresh login: clear prior Online confirmation so the console announces
+      // newly established Online rather than a restore after remount.
       clearPresenceIntent();
       router.replace("/admin");
       router.refresh();

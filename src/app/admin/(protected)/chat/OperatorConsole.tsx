@@ -10,9 +10,7 @@ import {
 } from "react";
 import { getOrCreateConsoleInstanceId } from "@/lib/chatOps/consoleInstance";
 import {
-  readPresenceIntent,
-  shouldEstablishPresenceOnMount,
-  writePresenceIntent,
+  readPresenceOnlineIntent,
   writePresenceOnlineIntent,
 } from "@/lib/chatOps/presenceIntent";
 import styles from "../../admin.module.css";
@@ -250,43 +248,6 @@ export function OperatorConsole() {
     [applyConfirmedOffline],
   );
 
-  const sendOffline = useCallback(
-    async (
-      bestEffort = false,
-      options?: { epoch?: number },
-    ): Promise<boolean> => {
-      const epoch = options?.epoch ?? presenceEpochRef.current;
-      const consoleInstanceId =
-        consoleInstanceIdRef.current ?? getOrCreateConsoleInstanceId();
-      const { status, body } = await adminMutate<PresenceResponse>(
-        "/api/admin/chat/presence/offline",
-        { consoleInstanceId, notAfterMs: Date.now() },
-      );
-      if (epoch !== presenceEpochRef.current) {
-        return false;
-      }
-      if (!bestEffort && status === 401) {
-        setPresenceError("Session expired. Sign in again.");
-        setPresenceSuccess(null);
-        return false;
-      }
-      if (!bestEffort && (status === 0 || status >= 400)) {
-        setPresenceError(errorMessage(body, "Could not go Offline."));
-        setPresenceSuccess(null);
-        return false;
-      }
-      if (status > 0 && status < 400) {
-        writePresenceIntent("offline");
-        setPresenceError(null);
-        setPresenceDetail("Offline for this console tab.");
-        setExpiresInMs(null);
-        return true;
-      }
-      return bestEffort;
-    },
-    [],
-  );
-
   const startHeartbeatLoop = useCallback(() => {
     stopHeartbeatLoop();
     heartbeatTimerRef.current = setInterval(() => {
@@ -301,89 +262,21 @@ export function OperatorConsole() {
     }, HEARTBEAT_INTERVAL_MS);
   }, [sendHeartbeat, stopHeartbeatLoop]);
 
-  const goOnline = useCallback(async () => {
-    if (presenceBusyRef.current || onlineRef.current) return;
-    presenceBusyRef.current = true;
-    setPresenceBusy(true);
-    setPresenceError(null);
-    setPresenceSuccess(null);
-    const epoch = ++presenceEpochRef.current;
-    try {
-      const ok = await sendHeartbeat({ epoch });
-      if (epoch !== presenceEpochRef.current) return;
-      if (!ok) {
-        // Stay Offline until Central confirms contribution.
-        writePresenceOnlineIntent(false);
-        setOnline(false);
-        return;
-      }
-      writePresenceOnlineIntent(true);
-      setOnline(true);
-      setPresenceSuccess("You are Online for this console tab.");
-      startHeartbeatLoop();
-    } finally {
-      // Always release the transition lock — epoch bumps (e.g. 401) must not
-      // leave presenceBusy stuck and block retries. Stale-response guards above
-      // still skip applying Online/Offline confirmation when superseded.
-      presenceBusyRef.current = false;
-      setPresenceBusy(false);
-    }
-  }, [sendHeartbeat, startHeartbeatLoop]);
-
-  const goOffline = useCallback(async () => {
-    if (presenceBusyRef.current || !onlineRef.current) return;
-    presenceBusyRef.current = true;
-    setPresenceBusy(true);
-    setPresenceError(null);
-    setPresenceSuccess(null);
-    const epoch = ++presenceEpochRef.current;
-    // Invalidate in-flight heartbeats and pause renewals while Offline confirms.
-    stopHeartbeatLoop();
-    try {
-      const ok = await sendOffline(false, { epoch });
-      if (epoch !== presenceEpochRef.current) return;
-      if (!ok) {
-        // Remain Online with confirmed connectivity until Offline succeeds.
-        if (onlineRef.current) {
-          startHeartbeatLoop();
-        }
-        return;
-      }
-      setOnline(false);
-      setPresenceSuccess("You are Offline for this console tab.");
-    } finally {
-      // Always release the transition lock — see goOnline finally.
-      presenceBusyRef.current = false;
-      setPresenceBusy(false);
-    }
-  }, [sendOffline, startHeartbeatLoop, stopHeartbeatLoop]);
-
-  const togglePresence = useCallback(async () => {
-    if (presenceBusyRef.current) return;
-    if (onlineRef.current) {
-      await goOffline();
-    } else {
-      await goOnline();
-    }
-  }, [goOffline, goOnline]);
-
-  useEffect(() => {
-    // After login (no intent) or refresh with Online intent: establish/reconfirm
-    // via Central heartbeat. Explicit Offline intent skips until Go Online or a
-    // new login clears the intent. Never show Online without confirmation.
-    let cancelled = false;
-    async function establishPresenceIfNeeded() {
-      if (!shouldEstablishPresenceOnMount()) return;
+  const establishOnline = useCallback(
+    async (options?: { restoring?: boolean; cancelled?: () => boolean }) => {
       if (presenceBusyRef.current || onlineRef.current) return;
-      const restoring = readPresenceIntent() === "online";
       presenceBusyRef.current = true;
       setPresenceBusy(true);
       setPresenceError(null);
+      setPresenceSuccess(null);
       const epoch = ++presenceEpochRef.current;
       try {
         const ok = await sendHeartbeat({ epoch });
-        if (cancelled || epoch !== presenceEpochRef.current) return;
+        if (options?.cancelled?.() || epoch !== presenceEpochRef.current) {
+          return;
+        }
         if (!ok) {
+          // Stay Offline until Central confirms contribution.
           writePresenceOnlineIntent(false);
           setOnline(false);
           return;
@@ -391,21 +284,35 @@ export function OperatorConsole() {
         writePresenceOnlineIntent(true);
         setOnline(true);
         setPresenceSuccess(
-          restoring
+          options?.restoring
             ? "Restored Online for this console tab."
             : "You are Online for this console tab.",
         );
         startHeartbeatLoop();
       } finally {
+        // Always release the transition lock — epoch bumps (e.g. 401) must not
+        // leave presenceBusy stuck and block retries. Stale-response guards above
+        // still skip applying Online confirmation when superseded.
         presenceBusyRef.current = false;
         setPresenceBusy(false);
       }
-    }
-    void establishPresenceIfNeeded();
+    },
+    [sendHeartbeat, startHeartbeatLoop],
+  );
+
+  useEffect(() => {
+    // Authenticated console entry: establish or reconfirm Online via Central
+    // heartbeat. Never show Online without confirmation. No manual offline
+    // preference — logout withdraws presence; unexpected closure uses TTL.
+    let cancelled = false;
+    void establishOnline({
+      restoring: readPresenceOnlineIntent(),
+      cancelled: () => cancelled,
+    });
     return () => {
       cancelled = true;
     };
-  }, [sendHeartbeat, startHeartbeatLoop]);
+  }, [establishOnline]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -420,8 +327,8 @@ export function OperatorConsole() {
       stopHeartbeatLoop();
       inboxAbortRef.current?.abort();
       conversationAbortRef.current?.abort();
-      // Do not POST Offline on unmount/refresh/pagehide. Explicit Go Offline and
-      // logout withdraw presence; unexpected closure is covered by heartbeat TTL.
+      // Do not POST Offline on unmount/refresh/pagehide. Logout withdraws
+      // presence; unexpected closure is covered by heartbeat TTL.
     };
   }, [sendHeartbeat, stopHeartbeatLoop]);
 
@@ -660,11 +567,6 @@ export function OperatorConsole() {
   const status = readiness?.conversationOps ?? "not_configured";
   const conversations = dashboard?.recentConversations ?? [];
   const attentionCount = conversations.filter((c) => c.needsAttention).length;
-  const presenceControlLabel = online ? "Go offline" : "Go online";
-  const presenceDisabledReason = presenceBusy
-    ? "Waiting for the presence service…"
-    : null;
-
   function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const order = SURFACES.map((s) => s.id);
     const index = order.indexOf(surface);
@@ -802,7 +704,7 @@ export function OperatorConsole() {
               className={styles.ghost}
               onClick={() => openSurface("availability")}
             >
-              Manage availability
+              View availability
             </button>
             <button
               type="button"
@@ -824,16 +726,23 @@ export function OperatorConsole() {
         >
           <h2 className={styles.sectionTitle}>Operator Availability</h2>
           <p className={styles.lede}>
-            After sign-in this tab goes Online once Central confirms the
-            heartbeat. Choose Go Offline when you are unavailable; that choice
-            survives refresh until you go Online again or sign in anew. Each
-            browser tab has its own presence session. State changes only after
-            the presence service confirms.
+            After sign-in this tab goes Online automatically once Central
+            confirms the heartbeat. Presence stays Online across refresh and
+            navigation while your session is valid. Sign out to withdraw;
+            unexpected browser closure is cleared by heartbeat TTL. Each
+            browser tab has its own presence session. Status below is
+            read-only.
           </p>
           <dl className={styles.statusGrid}>
             <div>
               <dt>This tab</dt>
-              <dd aria-live="polite">{online ? "Online" : "Offline"}</dd>
+              <dd aria-live="polite">
+                {presenceBusy && !online
+                  ? "Establishing…"
+                  : online
+                    ? "Online"
+                    : "Offline"}
+              </dd>
             </div>
             <div>
               <dt>Heartbeat TTL</dt>
@@ -854,8 +763,8 @@ export function OperatorConsole() {
               <button
                 type="button"
                 className={styles.linkButton}
-                disabled={presenceBusy}
-                onClick={() => void togglePresence()}
+                disabled={presenceBusy || online}
+                onClick={() => void establishOnline()}
               >
                 Retry
               </button>
@@ -864,25 +773,6 @@ export function OperatorConsole() {
           {presenceSuccess ? (
             <p className={styles.success} role="status">
               {presenceSuccess}
-            </p>
-          ) : null}
-          <div className={styles.actionRow}>
-            <button
-              type="button"
-              className={online ? styles.ghost : styles.submit}
-              disabled={presenceBusy}
-              aria-busy={presenceBusy}
-              aria-describedby={
-                presenceDisabledReason ? "presence-disabled-reason" : undefined
-              }
-              onClick={() => void togglePresence()}
-            >
-              {presenceBusy ? "Updating…" : presenceControlLabel}
-            </button>
-          </div>
-          {presenceDisabledReason ? (
-            <p id="presence-disabled-reason" className={styles.srOnly}>
-              {presenceDisabledReason}
             </p>
           ) : null}
           <p className={styles.note}>
