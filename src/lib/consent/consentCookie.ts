@@ -17,8 +17,8 @@ export const CONSENT_COOKIE_VERSION = 1;
  *
  * 180 days (15,552,000 seconds) is not a confirmed retention period. Legal
  * confirmation against the privacy policy and the retention requirements is
- * still required before this lifetime is treated as final. Banner and Cookie
- * settings copy must not present 180 days as settled. If the confirmed
+ * still required before this lifetime is treated as final. Cookie settings
+ * copy must not present 180 days as settled. If the confirmed
  * lifetime or the cookie version changes, ask for the choice again.
  *
  * F.2B-2 sections 4.3, 4.5 item 7, and 4.7; launch checklist section 3.
@@ -51,7 +51,7 @@ export const DENIED_PREFERENCES: ConsentPreferences = {
 };
 
 /**
- * Checked appearance in Manage Preferences when no valid choice is saved.
+ * Checked appearance in Cookie settings when no valid choice is saved.
  * Opening the dialog with these values does not write a cookie and does not
  * grant analytics or advertising.
  */
@@ -76,7 +76,7 @@ function isWithinRetention(chosenAt: number, now: number): boolean {
 }
 
 /**
- * Preferences to show in Cookie settings or Manage Preferences.
+ * Preferences to show in Cookie settings.
  * No valid choice shows both categories checked. That appearance is not
  * stored. A saved choice, including a denied category, is shown exactly.
  */

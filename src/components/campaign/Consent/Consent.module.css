@@ -1,37 +1,8 @@
 /*
- * Campaign consent. Fixed so it does not shift the page, and drawn with the
- * same paper, ink, and teal as the rest of the campaign. No motion: the
- * choice should appear and leave without a transition.
+ * Cookie settings dialog. Drawn with the same paper, ink, and teal as the
+ * rest of the campaign. No motion: the dialog should appear and leave
+ * without a transition.
  */
-
-.banner {
-  position: fixed;
-  z-index: 120;
-  inset-inline: 0;
-  bottom: 0;
-  max-height: 85vh;
-  overflow: auto;
-  border-top: 1px solid rgb(18 32 58 / 0.1);
-  background: var(--color-paper);
-  box-shadow: 0 -16px 40px -28px rgb(18 32 58 / 0.7);
-  color: var(--color-ink);
-}
-
-.bannerInner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-width: var(--container-max);
-  margin-inline: auto;
-  padding: var(--space-4) var(--container-gutter) max(var(--space-4), env(safe-area-inset-bottom));
-}
-
-.copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-width: 42rem;
-}
 
 .title {
   font-family: var(--font-display);
@@ -54,8 +25,7 @@
 }
 
 .primary,
-.secondary,
-.quiet {
+.secondary {
   min-height: 2.75rem;
   padding: var(--space-3) var(--space-5);
   font-weight: var(--weight-semibold);
@@ -82,14 +52,6 @@
 
 .secondary:hover {
   background: var(--color-brand-soft);
-}
-
-.quiet {
-  border: 0;
-  background: transparent;
-  color: var(--color-brand-strong);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 .backdrop {
@@ -179,12 +141,6 @@
 }
 
 @media (min-width: 768px) {
-  .bannerInner {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-
   .actions {
     flex: none;
     justify-content: flex-end;
@@ -197,14 +153,12 @@
 
 @media (max-width: 479px) {
   .actions > .primary,
-  .actions > .secondary,
-  .actions > .quiet {
+  .actions > .secondary {
     flex: 1 1 100%;
   }
 }
 
 @media print {
-  .banner,
   .backdrop {
     display: none;
   }

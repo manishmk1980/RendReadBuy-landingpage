@@ -291,12 +291,6 @@ export const campaignCopy = {
     },
   },
   consent: {
-    bannerTitle: "Cookies on this page",
-    bannerBody:
-      "Analytics and advertising cookies are optional. Both stay off until you choose. This page saves your choice in this browser, and you can change it any time from Cookie settings in the footer.",
-    acceptAll: "Accept All",
-    rejectOptional: "Reject Optional",
-    managePreferences: "Manage Preferences",
     dialogTitle: "Cookie settings",
     dialogBody:
       "Choose whether this page may use analytics and advertising cookies. Both stay off unless you allow them. Checked categories are saved only when you choose Save preferences. Closing without saving leaves your saved choice unchanged.",

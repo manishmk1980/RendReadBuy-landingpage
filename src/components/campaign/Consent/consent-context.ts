@@ -13,7 +13,7 @@ export const ConsentContext = createContext<ConsentApi | null>(null);
 export function useConsent(): ConsentApi {
   const value = useContext(ConsentContext);
   if (!value) {
-    throw new Error("Cookie settings must be rendered inside the campaign consent banner.");
+    throw new Error("Cookie settings must be rendered inside campaign consent.");
   }
   return value;
 }
