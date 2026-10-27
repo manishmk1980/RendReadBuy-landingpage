@@ -59,23 +59,16 @@ export const sharedChatStorageKeys = {
 } as const;
 
 /**
- * Visitor-facing service credit. Widget 1.3.0 has no attribution field:
+ * Compact cookie-settings disclosure. Widget 1.3.0 has no attribution field:
  * panel title, assistant name and team name come from the platform
- * `chatWidget` payload. This notice is the landing-page credit.
+ * `chatWidget` payload. This copy is the landing-page credit.
  */
 export const sharedChatDisclosure = {
-  title: "Chat Support & Privacy",
-  paragraphs: [
-    "RentReadBuy uses a chat support service powered by Primewayz Infotech to assist visitors with Silver Membership enquiries.",
-    "When you use chat, your messages and any contact information you voluntarily provide may be processed and stored to respond to your enquiry and arrange follow-up assistance.",
-    "Please avoid sharing passwords, payment card details or other sensitive information through chat.",
-  ],
-  privacyLead: "For more information, please see our",
+  processing:
+    "Chat support is powered by Primewayz Infotech. Messages and contact details shared may be processed to respond to your enquiry.",
+  safetyLead: "Do not share passwords or payment details. See our",
   privacyLabel: "Privacy Policy",
-  openLabel: "Open chat support",
-  openingLabel: "Opening chat support",
-  unavailable:
-    "Chat support is unavailable right now. The rest of this page still works, including Silver Membership signup.",
+  safetyTail: "for details.",
 } as const;
 
 /**

@@ -1,9 +1,11 @@
 /**
- * Phase 1 acceptance from F.2B-2 section 4.6 (P1–P11).
+ * Phase 1 acceptance from F.2B-2 section 4.6 (P1–P11), with the automatic
+ * cookie banner removed.
  *
- * Automated in this file: banner actions, independent choices, host-only
- * cookie attributes, same-document updates, rendered markup, browser API
- * identity, and an unset NEXT_PUBLIC_GTM_ID.
+ * Automated in this file: no automatic banner, default-denied tracking,
+ * footer Cookie settings, independent choices, host-only cookie attributes,
+ * same-document updates, rendered markup, browser API identity, and an unset
+ * NEXT_PUBLIC_GTM_ID.
  *
  * Still outside this file: a production browser's network log, a second
  * browser tab, a live request to rentreadbuy.com, and proof that container
@@ -150,13 +152,31 @@ async function renderCampaign() {
     </>,
   );
   await waitFor(() => {
-    const mode = document.querySelector("[data-consent-mode]")?.getAttribute("data-consent-mode");
-    expect(mode === "banner" || mode === "hidden" || mode === "preferences").toBe(true);
+    const current = document.querySelector("[data-consent-mode]")?.getAttribute("data-consent-mode");
+    expect(current === "hidden" || current === "preferences").toBe(true);
   });
+  assertNoAutomaticBanner();
 }
 
 function mode() {
   return document.querySelector("[data-consent-mode]")?.getAttribute("data-consent-mode");
+}
+
+function assertNoAutomaticBanner() {
+  expect(mode()).not.toBe("banner");
+  expect(screen.queryByText("Cookies on this page")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Accept All" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Reject Optional" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Manage Preferences" })).toBeNull();
+}
+
+function openCookieSettings() {
+  fireEvent.click(screen.getByRole("button", { name: "Cookie settings" }));
+}
+
+function setSwitch(name: RegExp, checked: boolean) {
+  const control = screen.getByRole("switch", { name }) as HTMLInputElement;
+  if (control.checked !== checked) fireEvent.click(control);
 }
 
 function switches() {
@@ -239,54 +259,60 @@ afterEach(() => {
 });
 
 describe("Phase 1 consent", () => {
-  it("P1 shows the banner with both categories denied and no tag markup", async () => {
+  it("P1 shows no automatic banner, keeps both categories denied, and loads no tags", async () => {
     watchNetwork();
     const href = window.location.href;
     await renderCampaign();
+    runConsentBootstrap();
 
-    expect(mode()).toBe("banner");
-    expect(screen.getByRole("button", { name: "Accept All" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reject Optional" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Manage Preferences" })).toBeTruthy();
+    expect(mode()).toBe("hidden");
     expect(screen.getByRole("button", { name: "Cookie settings" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Privacy" }).getAttribute("href")).toContain("/privacy-policy");
     expect(readStoredConsent()).toBeNull();
     expect(jar.get("_ga")).toBeUndefined();
     expect(jar.get("_fbp")).toBeUndefined();
     expect(writes).toEqual([]);
+    expect(consentCommands()[0]?.state).toMatchObject(DENIED_GOOGLE_CONSENT);
+    expect(consentCommands().some((entry) => entry.action === "update")).toBe(false);
+    expect(consentSignals().at(-1)).toEqual(consentSignal(DENIED_GOOGLE_CONSENT));
     assertNoTagMarkup();
     expect(requests.join("\n")).not.toMatch(BLOCKED_REQUEST);
     expect(window.location.href).toBe(href);
 
-    const banner = screen.getByText(campaignCopy.consent.bannerTitle).closest("section");
-    expect(banner?.textContent).toContain("Both stay off until you choose");
-    expect(banner?.textContent).not.toMatch(/180/);
     expect(screen.queryByText(campaignCopy.consent.preferencesDisclaimer)).toBeNull();
-    expect(JSON.stringify(campaignCopy.consent)).not.toMatch(/180/);
+    expect(screen.queryByText(/powered by Primewayz Infotech/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/180/);
+    expect(JSON.stringify(campaignCopy.consent)).not.toMatch(/180|Accept All|Reject Optional|Manage Preferences|Cookies on this page/);
     expect(campaignCopy.consent.dialogBody).toContain("Both stay off unless you allow them");
     expect(campaignCopy.consent.dialogBody).toContain("Checked categories are saved only when you choose Save preferences");
     expect(campaignCopy.consent.preferencesDisclaimer).toBe(
       "We use analytics and advertising technologies to understand website activity and measure campaign performance. You can disable either category by unchecking it and saving your preferences. You can change your choices anytime through Cookie settings.",
     );
-    for (const button of screen.getAllByRole("button")) {
-      if (!/Accept All|Reject Optional|Manage Preferences|Cookie settings/.test(button.textContent ?? "")) continue;
-      expect(button.getAttribute("data-track-event")).toBeNull();
-    }
+    expect(screen.getByRole("button", { name: "Cookie settings" }).getAttribute("data-track-event")).toBeNull();
   });
 
-  it("P2 stores Accept All on the same document and still loads no tags", async () => {
+  it("P2 stores an explicit accept from Cookie settings on the same document and still loads no tags", async () => {
     watchNetwork();
     const href = window.location.href;
-    const tracked = window.dataLayer?.length ?? 0;
     await renderCampaign();
+    runConsentBootstrap();
+    const tracked = window.dataLayer?.length ?? 0;
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(readStoredConsent()).toBeNull();
+    expect(consentCommands().some((entry) => entry.action === "update")).toBe(false);
+
+    openCookieSettings();
+    expect(switches().analytics.checked).toBe(true);
+    expect(switches().advertising.checked).toBe(true);
+    expect(readStoredConsent()).toBeNull();
+    expect(writes).toEqual([]);
     const rendered = requests.length;
 
-    fireEvent.click(screen.getByRole("button", { name: "Accept All" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
 
     expect(readStoredConsent()).toMatchObject({ analytics: "granted", advertising: "granted" });
     expect(mode()).toBe("hidden");
-    expect(screen.queryByRole("button", { name: "Accept All" })).toBeNull();
+    assertNoAutomaticBanner();
     expect(window.location.href).toBe(href);
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(links);
     expect(window.dataLayer?.length ?? 0).toBe(tracked);
@@ -295,16 +321,22 @@ describe("Phase 1 consent", () => {
     assertNoTagMarkup();
   });
 
-  it("P3 stores Reject Optional without a reload or a tag request", async () => {
+  it("P3 stores an explicit reject from Cookie settings without a reload or a tag request", async () => {
     watchNetwork();
     const href = window.location.href;
     await renderCampaign();
+    openCookieSettings();
+    setSwitch(/Analytics/, false);
+    setSwitch(/Advertising/, false);
+    expect(readStoredConsent()).toBeNull();
+    expect(writes).toEqual([]);
     const rendered = requests.length;
 
-    fireEvent.click(screen.getByRole("button", { name: "Reject Optional" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
 
     expect(readStoredConsent()).toMatchObject({ analytics: "denied", advertising: "denied" });
     expect(mode()).toBe("hidden");
+    assertNoAutomaticBanner();
     expect(window.location.href).toBe(href);
     expect(requests.slice(rendered)).toEqual([]);
     assertNoTagMarkup();
@@ -315,12 +347,19 @@ describe("Phase 1 consent", () => {
     const href = window.location.href;
     await renderCampaign();
     runConsentBootstrap();
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
 
     const controls = switches();
     expect(controls.analytics.checked).toBe(true);
     expect(controls.advertising.checked).toBe(true);
     expect(screen.getByText(campaignCopy.consent.preferencesDisclaimer)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Chat support is powered by Primewayz Infotech. Messages and contact details shared may be processed to respond to your enquiry.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toContain("/privacy-policy");
+    expect(screen.getByRole("dialog").textContent).toContain("Do not share passwords or payment details");
     expect(readStoredConsent()).toBeNull();
     expect(writes).toEqual([]);
     expect(consentCommands().some((entry) => entry.action === "update")).toBe(false);
@@ -345,7 +384,7 @@ describe("Phase 1 consent", () => {
     watchNetwork();
     const href = window.location.href;
     await renderCampaign();
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
     const controls = switches();
     expect(controls.analytics.checked).toBe(true);
     expect(controls.advertising.checked).toBe(true);
@@ -367,7 +406,7 @@ describe("Phase 1 consent", () => {
 
   it("saves the checked categories only when the visitor chooses Save preferences", async () => {
     await renderCampaign();
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
     expect(switches().analytics.checked).toBe(true);
     expect(switches().advertising.checked).toBe(true);
     expect(readStoredConsent()).toBeNull();
@@ -376,9 +415,10 @@ describe("Phase 1 consent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(readStoredConsent()).toBeNull();
     expect(writes).toEqual([]);
-    expect(mode()).toBe("banner");
+    expect(mode()).toBe("hidden");
+    assertNoAutomaticBanner();
 
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
     fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
     expect(readStoredConsent()).toMatchObject({ analytics: "granted", advertising: "granted" });
     expect(mode()).toBe("hidden");
@@ -387,7 +427,7 @@ describe("Phase 1 consent", () => {
 
   it("P6 reopens Cookie settings on the saved values and ignores a dismiss", async () => {
     await renderCampaign();
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
     expect(switches().analytics.checked).toBe(true);
     expect(switches().advertising.checked).toBe(true);
     expect(readStoredConsent()).toBeNull();
@@ -435,7 +475,8 @@ describe("Phase 1 consent", () => {
     await renderCampaign();
     runConsentBootstrap();
 
-    expect(mode()).toBe("banner");
+    expect(mode()).toBe("hidden");
+    assertNoAutomaticBanner();
     expect(consentCommands()[0]?.state).toMatchObject(DENIED_GOOGLE_CONSENT);
     expect(consentCommands().some((entry) => entry.action === "update")).toBe(false);
     expect(consentSignals().at(-1)).toEqual(consentSignal(DENIED_GOOGLE_CONSENT));
@@ -445,15 +486,22 @@ describe("Phase 1 consent", () => {
     expect(switches().analytics.checked).toBe(true);
     expect(switches().advertising.checked).toBe(true);
     expect(screen.getByRole("dialog").textContent).toContain(campaignCopy.consent.preferencesDisclaimer);
+    expect(screen.getByRole("dialog").textContent).toContain("powered by Primewayz Infotech");
+    expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toContain("/privacy-policy");
+    expect(screen.queryByRole("heading", { name: "Chat Support & Privacy" })).toBeNull();
     const rootSource = readFileSync(path.join("src", "components", "campaign", "Consent", "ConsentRoot.tsx"), "utf8");
     expect(rootSource).toContain("copy.preferencesDisclaimer");
+    expect(rootSource).toContain("sharedChatDisclosure");
     expect(rootSource).not.toContain("We use analytics and advertising technologies");
+    expect(rootSource).not.toContain("bannerTitle");
+    expect(rootSource).not.toContain('"banner"');
     const css = readFileSync(path.join("src", "components", "campaign", "Consent", "Consent.module.css"), "utf8");
     expect(css).toMatch(/\.preferenceHint\s*\{[^}]*font-size:\s*0\.75rem/);
     expect(css).toMatch(/\.disclaimer\s*\{[^}]*font-size:\s*0\.75rem/);
     expect(css).toMatch(/\.disclaimer\s*\{[^}]*line-height:\s*var\(--leading-normal\)/);
     expect(css).toMatch(/\.preference\s*\{[^}]*min-height:\s*2\.75rem/);
     expect(css).toMatch(/\.switch\s*\{[^}]*width:\s*1\.5rem/);
+    expect(css).not.toMatch(/\.banner\b/);
     fireEvent.click(switches().analytics);
     fireEvent.click(switches().advertising);
     expect(switches().analytics.checked).toBe(false);
@@ -466,7 +514,8 @@ describe("Phase 1 consent", () => {
     expect(jar.get("_ga")).toBe("GA1.2.keep");
     expect(writes).toEqual([]);
     expect(readStoredConsent()).toBeNull();
-    expect(mode()).toBe("banner");
+    expect(mode()).toBe("hidden");
+    assertNoAutomaticBanner();
     expect(consentSignals().at(-1)).toEqual(consentSignal(DENIED_GOOGLE_CONSENT));
 
     fireEvent.click(screen.getByRole("button", { name: "Cookie settings" }));
@@ -494,8 +543,12 @@ describe("Phase 1 consent", () => {
         <TagManager />
       </>,
     );
-    await waitFor(() => expect(mode()).toBe("banner"));
-    fireEvent.click(screen.getByRole("button", { name: "Reject Optional" }));
+    await waitFor(() => expect(mode()).toBe("hidden"));
+    assertNoAutomaticBanner();
+    openCookieSettings();
+    setSwitch(/Analytics/, false);
+    setSwitch(/Advertising/, false);
+    fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
     fireEvent.click(screen.getByRole("button", { name: "Cookie settings" }));
     expect(switches().analytics.checked).toBe(false);
     expect(switches().advertising.checked).toBe(false);
@@ -515,7 +568,7 @@ describe("Phase 1 consent", () => {
     );
     await waitFor(() => expect(mode()).toBe("hidden"));
 
-    expect(screen.queryByRole("button", { name: "Accept All" })).toBeNull();
+    assertNoAutomaticBanner();
     expect(readStoredConsent()).toEqual(saved);
     expect(readConsentFromCookieString(cookieHeader)).toEqual(saved);
     assertHostOnlyWrites();
@@ -529,7 +582,8 @@ describe("Phase 1 consent", () => {
     expect(CONSENT_RETENTION.note).toMatch(/legal confirmation/);
 
     await renderCampaign();
-    fireEvent.click(screen.getByRole("button", { name: "Accept All" }));
+    openCookieSettings();
+    fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
     expect(writes.some((write) => write.includes("Max-Age=15552000"))).toBe(true);
     expect(document.body.textContent).not.toContain(CONSENT_RETENTION.note);
     expect(document.body.textContent).not.toContain("180 days");
@@ -537,7 +591,7 @@ describe("Phase 1 consent", () => {
 
   it("P9 leaves fetch, XHR, sendBeacon, image construction, and DOM insertion untouched", async () => {
     await renderCampaign();
-    fireEvent.click(screen.getByRole("button", { name: "Manage Preferences" }));
+    openCookieSettings();
     fireEvent.click(switches().analytics);
     fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
     fireEvent.click(screen.getByRole("button", { name: "Cookie settings" }));
@@ -569,7 +623,6 @@ describe("Phase 1 consent", () => {
     jar.set("rrb_session", "main-site");
     await renderCampaign();
 
-    fireEvent.click(screen.getByRole("button", { name: "Accept All" }));
     fireEvent.click(screen.getByRole("button", { name: "Cookie settings" }));
     expect(switches().analytics.checked).toBe(true);
     expect(switches().advertising.checked).toBe(true);

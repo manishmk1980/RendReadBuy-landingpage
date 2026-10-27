@@ -7,6 +7,7 @@ import { AnalyticsListener } from "@/lib/analytics/AnalyticsListener";
 import { consentBootstrapSource } from "@/lib/analytics/consentMode";
 import { ConsentModeSync } from "@/lib/analytics/ConsentModeSync";
 import { TagManager } from "@/lib/analytics/TagManager";
+import { SharedChat } from "@/lib/sharedChat/SharedChat";
 import "@/styles/tokens.css";
 import "@/styles/motion.css";
 import "./globals.css";
@@ -118,6 +119,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {consentBootstrapSource()}
         </Script>
         {children}
+        <SharedChat />
         <AnalyticsListener />
         <ConsentModeSync />
         <TagManager />

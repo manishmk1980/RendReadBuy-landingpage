@@ -12,11 +12,12 @@ import {
   type ReactNode,
 } from "react";
 import { campaignCopy } from "@/config/campaign";
+import { links } from "@/config/links";
+import { sharedChatDisclosure } from "@/config/sharedChat";
 import {
   consentChoiceSnapshot,
   getServerConsentSnapshot,
   isPendingConsentSnapshot,
-  parseConsentValue,
   preferencesForEditor,
   readStoredConsent,
   subscribeToConsent,
@@ -26,9 +27,7 @@ import {
 import { COOKIE_SETTINGS_ID, ConsentContext, type ConsentApi } from "./consent-context";
 import styles from "./Consent.module.css";
 
-type ConsentMode = "pending" | "hidden" | "banner" | "preferences";
-
-const MANAGE_PREFERENCES_ID = "rrb-manage-preferences";
+type ConsentMode = "pending" | "hidden" | "preferences";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -45,6 +44,8 @@ function restoreFocus(id: string) {
 /**
  * Campaign-page consent. The choice is stored in the host-only cookie and
  * applied on this document; the page is not reloaded, and no tag loader runs.
+ * There is no automatic cookie banner. Optional analytics and advertising stay
+ * denied until the visitor saves a grant from footer Cookie settings.
  * The 180-day lifetime stays in the cookie module, where it is marked as
  * provisional pending legal confirmation — this UI does not state that period.
  * Checked switches before a saved choice are a suggestion only. They do not
@@ -55,9 +56,8 @@ export function ConsentRoot({ children }: { children: ReactNode }) {
   const [panel, setPanel] = useState<"closed" | "preferences">("closed");
   const [draft, setDraft] = useState<ConsentPreferences>(preferencesForEditor(null));
   const [returnFocusId, setReturnFocusId] = useState(COOKIE_SETTINGS_ID);
-  const stored = isPendingConsentSnapshot(snapshot) ? null : parseConsentValue(snapshot);
   const mode: ConsentMode =
-    panel === "preferences" ? "preferences" : isPendingConsentSnapshot(snapshot) ? "pending" : stored ? "hidden" : "banner";
+    panel === "preferences" ? "preferences" : isPendingConsentSnapshot(snapshot) ? "pending" : "hidden";
 
   const openPreferences = useCallback((focusId: string) => {
     setReturnFocusId(focusId);
@@ -94,13 +94,6 @@ export function ConsentRoot({ children }: { children: ReactNode }) {
     <ConsentContext.Provider value={api}>
       <div data-consent-mode={mode}>
         <div {...(mode === "preferences" ? { inert: true } : {})}>{children}</div>
-        {mode === "banner" ? (
-          <Banner
-            onAccept={() => save({ analytics: "granted", advertising: "granted" })}
-            onReject={() => save({ analytics: "denied", advertising: "denied" })}
-            onManage={() => openPreferences(MANAGE_PREFERENCES_ID)}
-          />
-        ) : null}
         {mode === "preferences" ? (
           <PreferencesDialog
             draft={draft}
@@ -112,43 +105,6 @@ export function ConsentRoot({ children }: { children: ReactNode }) {
         ) : null}
       </div>
     </ConsentContext.Provider>
-  );
-}
-
-function Banner({
-  onAccept,
-  onReject,
-  onManage,
-}: {
-  onAccept: () => void;
-  onReject: () => void;
-  onManage: () => void;
-}) {
-  const copy = campaignCopy.consent;
-  const titleId = useId();
-
-  return (
-    <section className={styles.banner} aria-labelledby={titleId} data-pw-chat-avoid="">
-      <div className={styles.bannerInner}>
-        <div className={styles.copy}>
-          <p id={titleId} className={styles.title}>
-            {copy.bannerTitle}
-          </p>
-          <p className={styles.body}>{copy.bannerBody}</p>
-        </div>
-        <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={onAccept}>
-            {copy.acceptAll}
-          </button>
-          <button type="button" className={styles.secondary} onClick={onReject}>
-            {copy.rejectOptional}
-          </button>
-          <button type="button" id={MANAGE_PREFERENCES_ID} className={styles.quiet} onClick={onManage}>
-            {copy.managePreferences}
-          </button>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -166,9 +122,12 @@ function PreferencesDialog({
   returnFocusId: string;
 }) {
   const copy = campaignCopy.consent;
+  const chatCopy = sharedChatDisclosure;
   const titleId = useId();
   const bodyId = useId();
   const disclaimerId = useId();
+  const chatProcessingId = useId();
+  const chatSafetyId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -223,7 +182,7 @@ function PreferencesDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={`${bodyId} ${disclaimerId}`}
+        aria-describedby={`${bodyId} ${disclaimerId} ${chatProcessingId} ${chatSafetyId}`}
         tabIndex={-1}
         data-pw-chat-avoid=""
         onClick={(event) => event.stopPropagation()}
@@ -250,6 +209,16 @@ function PreferencesDialog({
         </div>
         <p id={disclaimerId} className={styles.disclaimer}>
           {copy.preferencesDisclaimer}
+        </p>
+        <p id={chatProcessingId} className={styles.disclaimer}>
+          {chatCopy.processing}
+        </p>
+        <p id={chatSafetyId} className={styles.disclaimer}>
+          {chatCopy.safetyLead}{" "}
+          <a href={links.privacy.href} className={styles.disclaimerLink}>
+            {chatCopy.privacyLabel}
+          </a>{" "}
+          {chatCopy.safetyTail}
         </p>
         <div className={styles.actions}>
           <button type="button" className={styles.primary} onClick={onSave}>
